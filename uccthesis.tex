@@ -1,0 +1,1456 @@
+\documentclass[MScDSA]{uccthesis}
+
+\title{Beyond Response Surface Methodology: A Validated Comparison of Statistical Models for Small-Sample Seaweed Extraction Experiment}
+\author{Mousumi Choudhury}
+\supervisor{Dr. Rabia Naqvi and Dr.Nilushni Sivapragasam} 
+\secondreader{Dr. Ben Taylor}
+\date{\today}
+
+\newcommand*{\COMMAND}[1]{\texttt{\textbackslash #1}}
+\newcommand*{\COMMANDWITHARGUMENT}[2]{\texttt{\textbackslash #1}\{#2\}}
+
+\addbibresource{mybib.bib}% should be in preamble
+\usepackage{float}
+\usepackage{makecell}
+\abstract{%
+Response Surface methodology (RSM) is widely used to optimise small, multi-factor experimental processes, but applied studies often emphasise training-data fit, while genuine predicted performance may receive less attention. This study evaluates whether more complex or regularised statistical methods improve prediction relative to a quadratic RSM benchmark using a 17-run Box--Behnken dataset from the  ultrasound-assisted deep eutectic solvent extraction of the seaweed \textit{Sachharina latissima}, varying amplitude (70--90\%), extraction time (5--15 min) and solid-to-solvent ratio (3--7\%) across three levels each, with four correlated responses covering two biochemical families: carbohydrate (TSC and CRY) and protein (TPC and PRY). Full and reduced quadratic RSM models were compared with partial least squares, ridge regression, and principal-component-based ridge variants using leave-one-out cross-validation, with model tuning nested within validation where required. Out-of-bag bootstrap resampling and an independent confirmation run were used to assess robustness. Neither PLS nor ridge provided a consistent predictive advantage over a quadratic model. Instead, the two response families required different structures: the carbohydrate responses were predicted more accurately when interaction terms were retained, whereas the protein responses were predicted more accurately when these terms were removed. This finding was confirmed independently across coefficient testing, cross-validation and bootstrap resampling. Principal Component Analysis (PCA) reduced the four correlated responses to two interpretable dimensions representing overall extraction performance and the carbohydrate-protein contrast. 
+
+Overall, extraction was highly predictable, while prediction of the carbohydrate --protein balance was more sensitive to model specification. At the experimentally confirmed process optimum, prediction errors ranged from from 0.33\% to 1.79\%. Although the absolute errors were small, model rankings differed from those obtained through internal validation, highlighting the uncertainty associated with prediction at an individual new condition. These findings show that added complexity does not necessarily improve prediction for small, multi-response datasets. They also provide a validation framework for similar experimental design studies, and highlight the importance of accounting for response-family-specific behaviour when selecting model specifications.
+}
+
+\renewcommand\addToFrontMatter[0]{%
+}
+
+\begin{document}
+\chapter{Introduction}
+\label{chap:introduction}
+\section{Background}
+\label{sec:Background}
+Efficient optimisation of extraction processes requires an understanding of how controllable operating conditions affect process yield and product composition, including possible nonlinear and interactive effects. Response Surface Methodology (RSM) is a widely used statistical framework for studying and optimising processes involving several controllable factors, including applications in food, chemical, and bioprocess engineering \parencite{Bezerra:2008}. A typical RSM study fits a first- or second- order polynomial model to a small, structured set of experimental runs. Common designs include the Box--Behnken and central composite designs, which are used to estimate main effects, interactions, and curvature within a defined experimental region \parencite{Box:1960,Bezerra:2008}. Model adequacy is commonly assessed using measures such as $R^2$, analysis of variance (ANOVA, and residual diagnostics, although a strong in-sample fit does not by itself establish out-of-sample predictive performance.
+
+The present study uses one such RSM dataset as its starting point. The data arise from an ultrasound-assisted deep eutectic solvent (US-DES) extraction process applied to the brown seaweed \textit{Saccharina latissima}, to recover carbohydrate and protein fractions from the biomass. The 17-run Box--Behnken design varied ultrasound amplitude, extraction time, and solid-to-solvent ratio. Total soluble carbohydrate (TSC), carbohydrate recovery yield (CRY), total protein content (TPC) and protein recovery yield (PRY) were measured as extraction responses. The resulting dataset therefore represents a small, structured, multi-response food-process experiment in which both predictive accuracy and the relationships among biochemical responses are of interest.
+
+Deep eutectic solvents (DES) and related natural deep eutectic solvents (NADES) have attracted attention as green extraction media for food and biomass applications because of their tuneable polarity, low toxicity, and ability to solubilise both polar and moderately non-polar compounds \parencite{Dai:2013}. Recent work has shown that DES can selectively extract proteins or carbohydrates from seaweed depending on the solvent composition and operating conditions \parencite{Moldes:2024}. However, most DES extraction studies to date have focused on identifying conditions that maximise a single response, with limited attention to multi-response modelling or the predictive stability of the resulting models.
+
+This study uses the US-DES extraction process as a case study in predictive food-process modelling. It examines whether the conventional quadratic RSM structure remains adequate when multiple correlated biochemical responses are considered and whether the required model complexity differs between carbohydrate- and protein-related extraction outcomes. 
+
+\section{Problem Statement}
+\label{sec:problem_statement}
+This dissertation is motivated by the challenges of modelling and validating small experimental datasets using RSM. With relatively few experimental runs, fitting a full quadratic model requires estimating several linear, quadratic, and interaction terms from limited information. This can produce a strong in-sample fit without necessarily providing reliable predictions for new experimental conditions. This distinction is particularly important in process optimisation because an apparently well-fitting response surface may nevertheless yield unstable estimates of process performance or recommended operating conditions when unnecessary model terms are retained.
+
+Applied RSM studies commonly report $R^2$, adjusted $R^2$ and analysis of variance significance as their primary evidence of model adequacy. External evaluation, when performed, is typically limited to a single confirmatory run rather than a systematic assessment of predictive performance across multiple held-out conditions. This pattern is common in the seaweed and broader plant polysaccharide extraction literature, in which  quadratic models of extraction yields are assessed using $R^2$ and ANOVA and validated through a single confirmation experiment at the predicted optimum rather than through cross-validation \parencite{Wan:2015, Zhan:2022}. Similarly, \parencite{Smucker:2021} showed that unreduced second-order RSM models can overfit when the underlying response surface is simpler than the fitted specification.
+
+These challenges are particularly important when several correlated responses are measured using the same small experimental design. The present study therefore examines how alternative statistical modelling approaches perform under these conditions.
+
+
+\section{Aims and Objectives}
+\label{sec:aims_and_objectives}
+The aim of this dissertation is to evaluate the predictive performance of quadratic RSM in a small, multi-response food-process experiment and to compare it with PLS, ridge regression, and principal component analysis (PCA)-based approaches. It also assesses whether carbohydrate- and protein-related responses require different levels of model complexity. This aim is addressed through four objectives:
+\begin{itemize}
+    \item To fit and validate the quadratic RSM model as a benchmark for the US-DES extraction process.
+    \item To compare the RSM benchmark with PLS, ridge regression, and principal-component-based ridge variants applied to the predictor and the response spaces, using a cross-validation framework.
+    \item To compare model performance for the carbohydrate-related and protein-related responses and assess whether they benefit from different model specifications.
+    \item To assess the robustness of the model comparisons using predictor reparameterisation, out-of-bag bootstrap resampling, and an independent experimental confirmation run.
+\end{itemize}
+
+\section{Data and Code Availability}
+The experimental dataset and R code used to conduct all analyses reported in this dissertation are available in the following repository: \url{https://github.com/Mousumi096/MSc_DSA_Seaweed_extraction}. 
+
+\chapter{Literature Review}
+\label{chap:literature_review}
+\section{RSM and Aternative Modelling Approaches}
+\label{sec:rsm_and_alt_modelling}
+RSM remains widely used in food and bioprocess optimisation, but recent studies have increasingly compared its predictive performance with that of machine-learning approaches. The findings are mixed. \parencite{Mehdaoui:2025}, optimising chickpea yield from compost application using a Box-Behnken design of comparable size to the one used in this dissertation, compared RSM with an artificial neural network, support vector regression and XGBoost. RSM performed strongly and was matched only by the neural network. Support vector regression and XGBoost performed considerably worse. In contrast, \parencite{Ahmad:2024}, used a larger central composite design for biogas production and reported slightly better performance from gradient-boosting methods than from RSM. These studies do not establish that alternative machine-learning reliably improve on RSM. In the studies above, machine-learning models were assessed using train--test splits or cross-validation, whereas RSM performance was primarily reported using training-data fit statistics. The models were therefore not always evaluated on the same predictive basis. These comparisons have also largely focused on RSM versus flexible machine-learning methods, with less attention given to regularised and multivariate statistical approaches such as ridge regression and PLS, which may be better suited to small experimental datasets.
+
+Beyond the choice of modelling methods, process variables are important determinants of extraction efficiency in the food and biomass literature. Solvent-to-solid ratio, extraction time, and temperature are repeatedly identified as primary drivers of yield \parencite{Bhadange:2024}. In ultrasound-assisted processes, sonication amplitude is likewise recognised as an important factor. RSM studies involving seaweed and other biomass routinely vary these conditions to optimise extraction performance. Ultrasound-assisted extraction of polysaccharides from brown seaweeds have been optimised using Box--Behnken designs that vary material-to-solvent ratio, time, temperature and ultrasonic power \parencite{Wan:2015}. This provides a clear precedent for the choice of predictors in the present study, in which the central question is not which factors influence extraction but how best to model their effects.
+
+This question is directly relevant to deep eutectic solvent (DES) extraction, the technology underlying the present dataset. DES and NADES have been studied as green solvents for extracting proteins, polysaccharides, and phenolics from food and biomass \parencite{Dai:2013}. In extraction studies using such solvents, RSM is commonly used to identify optimal solvent compositions and operating conditions \parencite{Wan:2015}. Recent work on \textit{Saccharina latissima} has shown that DES can selectively extract proteins rather than carbohydrates or vice versa, depending on the solvent formulation and process conditions \parencite{Moldes:2024}. This shows that different biochemical families may show different response patterns that a single quadratic RSM model may not capture equally well.
+
+An important question is whether the response surface used to identify the optimum ca observations, rather than simply providing a good fit to the experimental data. Much of the RSM extraction literature focuses on locating an optimum, with limited attention to whether the fitted response surface generalises beyond the specific design points used to identify that optimum. A systematic review of RSM-based carotenoid extraction studies found that, among manuscripts reporting an optimisation step, only 67\% included experimental validation in which the model prediction was compared with a new observed at the identified optimum. The remainder reported no such check \parencite{CanoLamadrid:2023}. Even studies that compare different methods, the main goal is still just to find an optimum. Both \parencite{Mehdaoui:2025} and \parencite{Ahmad:2024} relied primarily on RSM fit statistics to establish model adequacy before proceeding to optimisation using a desirability function. 
+
+A strong training fit does not guarantee that the full model structure will provide the best predictions \parencite{Smucker:2021}. This supports the consideration of reduced and regularised models as alternatives to the full quadratic specification.
+
+Overall, the existing literature shows mixed evidence regarding the relative performance of RSM and alternative modelling approaches. It also leaves limited evidence on how RSM compares with regularised and multivariate methods when all models are evaluated on a common predictive basis. 
+
+\section{Multivariate and Regularised Models}
+\label{sec:multivariate_and_reg_modelling}
+PLS regression is a multivariate approach widely used in chemometrics that can jointly model correlated predictors and responses \parencite{Wold:2001}. It is therefore applicable to food-process studies, in which several related quality or yield measures are often recorded under the same conditions, and  offers alternative to the conventional RSM practice of modelling each response separately. 
+
+Ridge regression addresses a different problem, the instability that can arise when predictors are correlated or more in number relative to sample size. These conditions are common in polynomial models with many interaction and quadratic terms \parencite{Hoerl:1970,Hastie:2009}. Rather than modelling responses jointly, ridge regression shrinks coefficient estimates towards zero, therefore reducing the risk of overfitting in a full quadratic RSM model.
+
+PCA provides another approach to  handling correlated variables by transforming them into a smaller number of orthogonal components that capture the principal patterns of variation in the data \parencite{Jolliffe:2002}. In a multi-response food-process setting, PCA can distinguish common extraction behaviour across all responses from additional dimensions representing contrasts between biochemical response families.
+
+PLS, ridge, and PCA address related challenges arising from correlated data and small samples, but do so through joint modelling, coefficient shrinkage, and dimensionality reduction, respectively. Together, they provide alternatives for assessing whether the predictive performance of the full quadratic RSM model can be matched or improved using regularised or lower-dimensional representations.
+
+\section{Cross-Validation and Model Stability}
+\label{sec:cross_validation_and_model_stability}
+Cross-validation is widely used to assess predictive performance when independent test data are limited. Leave-one-out cross-validation (LOOCV) is suitable for small datasets because each observation is used once for validation while the remaining observations are used for model fitting  \parencite{Stone:1974}. For models requiring data-dependent tuning, nested cross-validation separates parameter selection from performance assessment, reducing the risk of optimistically biased performance estimates \parencite{Varma:2006}.
+
+Bootstrap resampling provides complementary information about model stability by examining how estimates and predictions vary across repeated samples drawn from the available observations \parencite{Efron:1979}. These approaches provide a more informative assessment of predictive performance and stability than training data fit statistics alone.
+
+\section{Research Gap and Study Context}
+\label{sec:research_gap}
+Existing studies provide mixed evidence on whether more flexible modelling approaches improve prediction over RSM in small food-process experiments. In a comparably sized Box--Behnken design, RSM outperformed neural network, support vector regression and gradient-boosting alternatives \parencite{Mehdaoui:2025}, whereas study using a larger central composite design reported that gradient-boosting methods performed only marginally better than RSM \parencite{Ahmad:2024}. In both cases, the models were not compared using equivalent validation procedures. Machine learning models were assessed using a train--test split or cross-validation, whereas RSM was assessed primarily using training-data fit. This highlights the limited use of out-of-sample validation in RSM-based extraction studies \parencite{CanoLamadrid:2023}.
+
+Less attention has been given to whether the appropriate level of quadratic complexity differs across correlated biochemical response families. \parencite{Smucker:2021} show that no single model-reduction strategy worked best for all responses, but this has not been examined specifically for biochemically distinct response families measured under the same experimental conditions. This issue is important in multi-response extraction processes, where responses may share a common process signal while retaining family-specific interaction behaviour. This supports the PCA-based response structure discussed in Section~\ref{sec:multivariate_and_reg_modelling} and is consistent with observations from DES extraction of \textit{Saccharina latissimi}, in which solvent formulation selectively favoured protein over carbohydrate recovery depending on the process conditions \parencite{Moldes:2024}.
+
+These findings provide a basis for comparing full and reduced quadratic RSM models, joint-response PLS, regularised ridge approaches, and PCA-based variants under a common validation framework.
+
+
+\chapter{Statistical Modelling Framework}
+\label{chap:methodology}
+
+\section{Overview}
+\label{sec:modelling_overview}
+This section describes the statistical modelling framework used to investigate the relationships between ultrasound-assisted extraction conditions and four extraction responses: total soluble carbohydrates, carbohydrate recovery yield, total protein content, and protein recovery yield. The modelling strategy was designed not only to assess overall predictive performance but also to determine whether the carbohydrate- and protein-related responses required different levels of model complexity. Quadratic regression models based on response surface methodology (RSM) were first reconstructed as the response-specific benchmarks. The analysis was then extended using correlation analysis, principal component analysis (PCA), the multivariate statistical techniques partial least squares (PLS) regression, and ridge-based regression approaches to assess the shared multivariate response structure, predictive stability, and the role of interaction terms under small-sample conditions.
+
+As RSM is widely used for modelling and optimisation in food-processing applications \parencite{Yolmeh:2017}, the purpose of the comparison was not simply to determine whether alternative modelling approaches could outperform it. The analysis also examined whether multivariate and regularised methods could improve predictive stability in a small-sample experimental design, and whether the required level of model complexity differed between the carbohydrate- and protein-related extraction responses.
+
+The model comparison was done in two steps. In the first step, the primary predictive evidence of each model was obtained using LOOCV. In the second step, robustness was assessed through predictor reparameterisation and data resampling to determine whether the LOOCV findings remained consistent under alternative predictor representations and across resampled datasets.
+
+\section{Experimental Design and Response Variables}
+\label{sec:experimental_design}
+The experimental data used in this dissertation were obtained from an RSM study of ultrasound-assisted deep eutectic solvent (US-DES) extraction applied to the brown seaweed \textit{Saccharina latissima}. The extraction of bioactive compounds (carbohydrates and proteins) was optimised by varying ultrasound amplitude, extraction time, and the solid-to-solvent ratio. The study used a three-factor, three-level Box--Behnken design (BBD) comprising 17 experimental runs to estimate linear, quadratic, and two-factor interaction effects \parencite{Box:1960}. The three independent process variables were:
+\begin{itemize}
+    \item[$A$:] Ultrasound amplitude (\%), representing the sonication power level applied during extraction;
+    \item[$B$:] Extraction time (min), representing the duration of ultrasound treatment; and
+    \item[$C$:] Solid-to-solvent ratio (\%), representing the amount of solvent relative to the sample mass.
+\end{itemize}
+
+The experimental design matrix and the corresponding response values recorded for each run are given in Table~\ref{tab:experimental_values}.
+
+\begin{table}[H]
+\centering
+\caption{Experimental design matrix and response values.}
+\label{tab:experimental_values}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{Run} & \textbf{Amplitude (\%)} & \textbf{Time (min)} & \textbf{Ratio (\%)} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+\midrule
+1 & 70 & 15 & 5 & 226.5 & 43.8 & 14.9 & 16.6 \\
+2 & 80 & 10 & 5 & 283.4 & 54.8 & 40.6 & 45.2 \\
+3 & 80 & 10 & 5 & 283.8 & 54.9 & 38.4 & 42.7 \\
+4 & 90 & 15 & 5 & 275.7 & 53.3 & 15.1 & 16.8 \\
+5 & 90 & 10 & 7 & 205.3 & 39.8 & 30.5 & 33.8 \\
+6 & 70 & 10 & 3 & 364.1 & 70.4 & 38.9 & 43.2 \\
+7 & 80 & 10 & 5 & 274.1 & 53.0 & 35.1 & 39.0 \\
+8 & 80 & 15 & 7 & 195.7 & 37.9 & 30.7 & 34.1 \\
+9 & 90 & 10 & 3 & 435.5 & 84.7 & 48.6 & 54.3 \\
+10 & 80 & 5 & 3 & 399.3 & 77.3 & 46.1 & 51.5 \\
+11 & 80 & 10 & 5 & 282.1 & 54.5 & 38.1 & 42.4 \\
+12 & 80 & 15 & 3 & 413.1 & 79.9 & 51.7 & 57.5 \\
+13 & 70 & 10 & 7 & 170.8 & 33.1 & 21.9 & 24.3 \\
+14 & 90 & 5 & 5 & 272.8 & 52.9 & 13.3 & 14.8 \\
+15 & 70 & 5 & 5 & 211.8 & 41.0 & 9.9 & 11.1 \\
+16 & 80 & 10 & 5 & 282.8 & 54.7 & 38.5 & 43.5 \\
+17 & 80 & 5 & 7 & 190.7 & 36.9 & 25.8 & 28.7 \\
+\bottomrule
+\end{tabular}
+
+\begin{flushleft}
+\small
+\textit{Note:} TSC: total soluble carbohydrates (mg glucose equivalents/g dried seaweed); CRY: carbohydrate recovery yield; TPC: total protein content (mg bovine serum albumin equivalents/g dried seaweed); PRY: protein recovery yield. Values shown are mean experimental measurements; triplicate standard deviations reported in the source study are omitted here because each of the 17 runs is treated as a single experimental design point in the present analysis.
+\end{flushleft}
+\end{table}
+
+Each factor was coded at three levels ($-1$, $0$, and $+1$), with five centre-point replicates ($A=B=C=0$):
+
+\begin{equation}
+A = \frac{\text{Amplitude} - 80}{10}
+\end{equation}
+
+\begin{equation}
+B = \frac{\text{Extraction Time} - 10}{5}
+\end{equation}
+
+\begin{equation}
+C = \frac{\text{Solid-to-solvent Ratio} - 5}{2}
+\end{equation}
+
+
+
+The actual factor values are given in Table~\ref{tab:coded_actual_levels}.
+\begin{table}[H]
+\centering
+\caption{Coded and actual levels of the process variables.}
+\label{tab:coded_actual_levels}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Factor} & \textbf{Low ($-1$)} & \textbf{Centre ($0$)} & \textbf{High ($+1$)} \\
+\midrule
+A -- Amplitude & 70 & 80 & 90 \\
+B -- Extraction time & 5 & 10 & 15 \\
+C -- Solid-to-solvent ratio & 3 & 5 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four response variables were recorded for each of the 17 runs:
+\begin{itemize}
+    \item Total Soluble Carbohydrates (TSC, mg glucose equivalents/g);
+    \item Carbohydrate Recovery Yield (CRY, \%);
+    \item Total Protein Content (TPC, mg bovine serum albumin equivalents/g); and
+    \item Protein Recovery Yield (PRY, \%).
+\end{itemize}
+
+Together, these variables represent the yield and compositional quality of the extract obtained under each set of operating conditions.
+The four responses were considered both individually and by biochemical family. TSC and CRY were treated as carbohydrate-related responses, while TPC and  PRY were treated as protein-related responses. This distinction was of practical interest because carbohydrate and protein extraction may respond differently to changes in ultrasound amplitude, extraction time, and solid-to-solvent ratio. The subsequent modelling framework therefore assessed whether a common quadratic structure was adequate for all responses or whether the two biochemical response families required different levels of interaction complexity.
+
+\section{Software}
+\label{sec:software}
+All statistical analyses were conducted using R version 4.5.3 \parencite{RCoreTeam:2026} within the RStudio integrated development environment (version 2025.09.0 Build 387) \parencite{RStudio:2025}. The \texttt{stats} packages was used for linear regression, MANOVA, ANOVA, and PCA. The \texttt{pls} package was used for partial least squares regression, including its built-in LOOCV (\texttt{validation = "LOO"}) and root mean squared error of prediction calculations, and \texttt{glmnet} package was used for ridge regression and regularised model fitting. Correlation plots were produced using \texttt{corrplot}. Cross-validation, resampling, and model-comparison procedures not implemented directly by package functions were conducted using custom R scripts.
+
+\section{Data Pre-processing and Response Structure}
+\label{sec:exploratory_data_analysis}
+Before modelling, the dataset was screened for missing values or inconsistent values. Exploratory boxplots, scatterplots, and Pearson correlations \parencite{Schober:2018} were used to assess the response distributions and pairwise relationships. Because TSC and CRY, and TPC and PRY, showed stronger within-family dependence, PCA \parencite{Jolliffe:2002} was applied to the centred and scaled response matrix to characterise the dominant joint response structure. The PC1 and PC2 scores were modelled using the second-order process structure specified in Equation~\ref{eq:full_quadratic_model} to explore the factors associated with overall extraction performance and the carbohydrate--protein contrast. This exploratory analysis was distinct from the predictive modelling procedures described in later sections.
+
+\section{Performance Metrics}
+\label{sec:performance_metrics}
+The same evaluation framework was applied across all models. A clear distinction was maintained between fitted values, obtained when a model was estimated and evaluated using the same data used for fitting, and predicted values, obtained through LOOCV when each observation was excluded from model fitting in turn. Fitted values do not by themselves indicate how well a model generalises to new observations. Training metrics were used to describe in-sample model fit, whereas cross-validated metrics assessed predictive performance \parencite{NIST:2012}. For the training metrics, $\hat{y}_i$ denotes the fitted value for observation $i$ from the model fitted using all $n=17$ observations, with residuals $e_i=y_i-\hat{y}_i$.
+
+Training fit was assessed using the following metrics:
+\begin{equation}
+    \mathrm{RMSE}_{\mathrm{train}} = \sqrt{\frac{1}{n} \sum_{i=1}^{n}
+    \left(y_i - \hat{y}_i\right)^2
+    }
+    \label{eq:train_rmse}
+\end{equation}
+
+\begin{equation}
+    \mathrm{MAE}_{\mathrm{train}} = \frac{1}{n} \sum_{i=1}^{n}
+    \left|y_i - \hat{y}_i\right|
+    \label{eq:train_mae}
+\end{equation}
+
+\begin{equation}
+    R^2_{\mathrm{train}} = 1 - \frac{\sum_{i=1}^{n}\left(y_i-\hat{y}_i\right)^2
+    }{
+    \sum_{i=1}^{n}\left(y_i-\bar{y}\right)^2
+    }
+    \label{eq:train_r2}
+\end{equation}
+
+where $\bar{y}$ is the sample mean, and each sum is taken over all $n=17$ runs.  Predictive performance was assessed using LOOCV. Each observation was withheld in turn, the model was refitted using the remaining 16 observations, and the held-out response was predicted \parencite{Stone:1974}. Here, $\hat{y}_{i}^{(-i)}$ denotes the prediction for observation $i$ from the model trained without that observation, with prediction error $e_{i}^{(-i)} = y_i - \hat{y}_{i}^{(-i)}$.
+
+The cross-validated metrics were calculated as:
+\begin{equation}
+    \mathrm{RMSE}_{\mathrm{LOOCV}} = \sqrt{\frac{1}{n} \sum_{i=1}^{n}
+    \left(y_i - \hat{y}_{i}^{(-i)}\right)^2
+    }
+    \label{eq:loocv_rmse}
+\end{equation}
+
+\begin{equation}
+    \mathrm{MAE}_{\mathrm{LOOCV}} = \frac{1}{n} \sum_{i=1}^{n}
+    \left|y_i - \hat{y}_{i}^{(-i)}\right|
+    \label{eq:loocv_mae}
+\end{equation}
+
+\begin{equation}
+    Q^2_{\mathrm{LOOCV}} = 1 - \frac{\sum_{i=1}^{n}\left(y_i-\hat{y}_{i}^{(-i)}\right)^2
+    }{
+    \sum_{i=1}^{n}\left(y_i-\bar{y}\right)^2
+    }
+    \label{eq:loocv_q2}
+\end{equation}
+
+$Q^2$ is the predictive coefficient of determination, analogous to $R^2$ but based on held-out predictions. Positive $Q^2$ indicates that the model outperforms prediction based on the sample mean, whereas a negative $Q^2$ indicates that it performs worse. 
+Prediction bias was calculated as the mean signed LOOCV prediction error:
+\begin{equation}
+    \mathrm{Bias}_{\mathrm{LOOCV}} = \frac{1}{n} \sum_{i=1}^{n}
+    \left(\hat{y}_{i}^{(-i)} - y_i\right)
+    \label{eq:loocv_bias}
+\end{equation}
+
+Positive bias indicates average overprediction, while negative bias indicates average underprediction by the model. A value close to zero indicates no systematic bias but does not necessarily indicate accurate predictions because positive and negative errors may cancel each other out.
+As TSC and CRY are measured on different scales from TPC and PRY, raw RMSE and MAE could not be compared directly across responses. Scaled RMSE and MAE were calculated by dividing each metric by the corresponding response's standard deviation, calculated once from the complete dataset:
+
+\begin{equation}
+   \mathrm{Scaled\ RMSE}_{\mathrm{LOOCV}} = \frac{\mathrm{RMSE}_{\mathrm{LOOCV}}}{\mathrm{SD}(y)}
+    \label{eq:scaled_loocv_rmse}
+\end{equation}
+
+\begin{equation}
+   \mathrm{Scaled\ MAE}_{\mathrm{LOOCV}} = \frac{\mathrm{MAE}_{\mathrm{LOOCV}}}{\mathrm{SD}(y)}
+    \label{eq:scaled_loocv_mae}
+\end{equation}
+
+where $\mathrm{SD}(y)$ is the standard deviation of the observed response across all 17 runs.
+
+For the single-point confirmation check described in Section~\ref{sec:predictive_verification}, three error measures were used instead of the LOOCV-based metrics because only one observed response vector was available at that condition. Prediction error was calculated as the predicted value minus the observed value, absolute error as the magnitude of this difference, and absolute percentage error (APE) as the absolute prediction error expressed as a percentage of the observed value \parencite{NIST:2012}:
+
+\begin{equation}
+   \mathrm{APE} = \frac{\left|\hat{y}-y\right|}{\left|y\right|} \times 100\%
+   \label{eq:ape}
+\end{equation}   
+where $\hat{y}$ is the predicted value and $y$ is the observed value.
+
+\section{Model Diagnostics}
+\label{sec:model_diagnostics}
+Model performance was evaluated using complementary methods appropriate to each modelling framework. Observed-versus-predicted plots were created for the four principal candidate models carried forward to the final model selection (Section~\ref{sec:model_evaluation_and_comparison}). These were assessed using LOOCV-predicted values. Deviations from the $45^\circ$ reference line indicated discrepancies between measured and predicted responses. The quadratic regression models were further assessed using residuals-versus-fitted plots to examine model adequacy and potential departures from the assumptions of ordinary least-squares regression \parencite{Montgomery:2017}. Cook's distance was used to assess the potential influence of individual observations \parencite{Cook:1977, Cook:1982}, while coefficient significance was assessed using standard errors and associated $p$-values.
+
+\section{Response-Specific Quadratic Regression Models}
+\label{sec:response_specific_quad_regression}
+RSM formed the statistical baseline for this study. The original experiment developed quadratic response surface models using a Box--Behnken design to model the effects of ultrasonic amplitude, extraction time, and solid-to-solvent ratio on the four extraction responses (TSC, CRY, TPC, and PRY). Using the experimental dataset, equivalent quadratic regression models were fitted in R to verify that the estimated coefficients and model performance were consistent with the original RSM results. These response-specific quadratic models provided the benchmark against which the subsequent multivariate and regularised models were compared. In particular, the comparison assessed whether retaining the full quadratic structure, including the interaction terms, improved prediction equally for the carbohydrate- and protein-related response families.
+
+Following reconstruction of the RSM benchmark, the analysis was extended to compare the full and reduced quadratic model structures, multivariate PLS models, and ridge-based regularised alternatives.
+
+\subsection{Replication of the RSM Model}
+\label{sec:rsm_replication}
+A second-order response-surface regression model was fitted separately to TSC, CRY, TPC, and PRY using the coded process variables as predictors. The model contained first-order, two-factor interaction , and quadratic terms, allowing linear effects, factor interactions, and curvature within the experimental region to be estimated \parencite{Montgomery:2017}. The coefficients were estimated using ordinary least squares \parencite{Draper:1998}.
+
+For each response variable, a full quadratic RSM-style model was fitted:
+\begin{equation}
+\begin{aligned}
+Y = {}& \beta_0 + \beta_1 A + \beta_2 B + \beta_3 C + \beta_{12}AB + \beta_{13}AC + \beta_{23}BC \\
+&+ \beta_{11}A^2 + \beta_{22}B^2 + \beta_{33}C^2 
++\varepsilon
+\end{aligned}
+\label{eq:full_quadratic_model}
+\end{equation}
+
+where
+\begin{itemize}
+    \item $Y$ is the response variable (TSC, CRY, TPC, or PRY).
+    \item $A$, $B$, and $C$ are the coded process variables (amplitude, time, and solid-to-solvent ratio, respectively).
+    \item $\beta_0$ is the model intercept (predicted response at the centre point).
+    \item $\beta_1$, $\beta_2$, and $\beta_3$ are the linear coefficients representing the main effect of each factor.
+    \item $\beta_{11}$, $\beta_{22}$, and $\beta_{33}$ are the quadratic coefficients representing curvature in each factor.
+    \item $\beta_{12}$, $\beta_{13}$, and $\beta_{23}$ are the two-way interaction coefficients representing how the effect of one factor changes with the level of another.
+    \item $\varepsilon$ is the random error term, assumed to be independent and normally distributed with mean zero.
+\end{itemize}
+
+A reduced model was also fitted by excluding the two-way interaction terms $AB$, $AC$, and $BC$:
+\begin{equation}
+Y = \beta_0 + \beta_1 A + \beta_2 B + \beta_3 C + \beta_{11}A^2 + \beta_{22}B^2 + \beta_{33}C^2 + \varepsilon
+\label{eq:red_quadratic_model}
+\end{equation}
+
+The full and reduced models were compared to assess whether the interaction terms improved predictive performance across the carbohydrate- and protein-related responses.
+
+\subsection{RSM Residual and Influence Diagnostics}
+\label{sec:inf_diagnostics}
+Residual-versus-fitted plots were generated for each of the full and reduced quadratic regression models to assess whether the residuals were randomly scattered around zero and had an approximately constant spread across the range of fitted values. Any systematic curvature and funnel shape were examined as possible indications of assumption violations. Cook's distance was used to identify observations that might have an unusually large influence on the fitted models \parencite{Cook:1977}. Observations with Cook's distance values greater than $4/n$ (where $n=17$ and $4/17= 0.235$) were flagged for further examination. This value was used as a common rule-of-thumb threshold rather than a formal criterion for declaring an observation influential \parencite{Yellowbrick:2022}. Values greater than 1 were also examined as potentially highly influential . Observations exceeding either threshold were examined for data-entry errors, measurement problems, and undue influence. Unless such evidence was identified, the observations were retained in the analyses. 
+
+Finally, the fitted regression coefficients and model metrics were compared with the original RSM models to verify that the replicated quadratic models reproduced similar results.
+
+\section{Multivariate Analysis of Variance (MANOVA)}
+\label{sec:manova_model}
+MANOVA tested the joint effects of the process factors across all four responses, given the substantial common structure identified in Section~\ref{sec:exploratory_data_analysis} \parencite{Mardia:1979}. Three nested models of increasing complexity were compared using Pillai's trace \parencite{Pillai:1955}: a main-effects model, a model including two-way interaction terms, and the full quadratic model. Here $Y$ was treated jointly as the four-response vector (TSC, CRY, TPC, PRY), rather than as a single response as in Section~\ref{sec:rsm_replication}. Given the small sample size, MANOVA was used as a supporting exploratory analysis rather than as the primary basis for predictive model selection. Partial least squares (PLS) regression was therefore introduced as the next modelling approach.
+
+\section{Nested Cross-Validation Framework}
+\label{sec:nested_cross_validation}
+Model tuning and validation followed the specific requirements of each modelling approach. The RSM models were fitted using ordinary least squares and did not require tuning. Seven models - linear, full quadratic, and reduced quadratic PLS (Section~\ref{sec:pls_regression}); full and reduced ridge (Section~\ref{sec:ridge_regression}); and full and reduced response-PC ridge (Section~\ref{sec:response_derived_pc}), were optimised using fully nested LOOCV. The remaining two models, full and reduced predictor-PC ridge, were included as supplementary robustness analyses to assess whether the ridge results were sensitive to representing  the predictor space through PCA. Because these models were intended as an additional sensitivity check, the number of retained predictor components and the ridge penalty $\lambda$ were selected using a separate single-level LOOCV procedure.
+Selecting a tuning parameter using the same data used to evaluate predictive performance can produce optimistically biased error estimates because the tuning procedure is influenced by the validation results \parencite{Varma:2006}. To reduce this risk, nested LOOCV was used for the seven models.
+
+In the outer loop, each of the 17 experimental runs was held out in turn. For each outer training set, consisting of 16 observations, an inner LOOCV loop evaluated the candidate tuning specifications. For the PLS models the tuning parameter was the number of components. For the ridge models, $\lambda$ was selected from a 100-point logarithmically spaced grid ranging from $10^{-4}$ to  $10^4$. The specification that minimised the inner cross-validation prediction error was selected and used to refit the model on all 16 outer training observations. The refitted model was then used to predict the held-out observation. This process was repeated across all 17 outer folds, producing one out-of-sample prediction for each experimental run.
+
+For response-PC ridge, the response-space PCA was re-estimated using only the observations available within each outer training set, ensuring that the held-out response values did not influence the transformation. Because tuning was repeated independently within each outer fold, the selected tuning specification could vary between folds. The resulting outer-fold predictions formed the basis of the primary LOOCV performance assessment.
+
+Separately, a single tuning specification was selected by cross-validation using the complete dataset for each tuned model. These full-data tuning specifications were used for two purposes: to report descriptive coefficients or loading weights from models fitted to all 17 observations and to provide fixed tuning values for the bootstrap resampling procedure (Section~\ref{sec:bootstrap_resampling}), in which tuning was not repeated for each bootstrap sample.
+
+The full and reduced predictor-PC ridge models were evaluated separately using a single-level LOOCV procedure in which the number of retained predictor components and the ridge penalty $\lambda$ were selected jointly. The complete process, including the fold-specific preprocessing steps, is described in Section~\ref{sec:parameterisation_robustness}.
+
+\section{Partial Least Squares Regression}
+\label{sec:pls_regression}
+PLS was included to assess whether modelling the four correlated responses jointly improved prediction or provided additional interpretation beyond response-specific RSM models.
+
+PLS regression was chosen for three reasons specific to this dataset. First, the four responses were strongly correlated (Section~\ref{sec:exploratory_data_analysis}), so modelling them jointly, rather than one at a time, allowed their shared structure to be considered. Second, with $n=17$ observations and up to nine predictors in the quadratic model, ordinary least-squares (OLS) estimation was close to its available degrees-of-freedom limit. PLS addressed this issue by representing the predictor--response relationship through a limited number of latent components selected by cross-validation. Third, the latent components could be interpreted in terms of the process variables driving the responses, allowing the analysis to extend from prediction to process interpretation \parencite{Wold:2001}. All PLS models were fitted using the kernel algorithm in the \texttt{pls} package, with predictors mean-centred and scaled to unit variance before fitting \parencite{Mevik:2007}.
+
+\subsection{Linear PLS Model}
+\label{sec:linear_pls_regression}
+An initial PLS model was fitted using the three coded process variables, $A$, $B$, and $C$, as predictors, with TSC, CRY, TPC, and PRY forming the joint response block.
+The fitted model was:
+
+\begin{equation}
+\mathbf{Y} \sim A + B + C,
+\qquad
+\mathbf{Y} = \left(\mathrm{TSC},\,
+\mathrm{CRY},\,
+\mathrm{TPC},\,
+\mathrm{PRY}
+\right)
+\label{eq:linear_pls_regression}
+\end{equation}
+
+This model was fitted to determine whether the extraction process could be described using only the linear effects of the process variables. It also provided a baseline against which the effect of incorporating quadratic and interaction terms could later be assessed. As the model did not include such terms, it could not represent the curvature or interaction effects captured by the quadratic regression models.
+
+\subsection{Full and Reduced Quadratic PLS Model}
+\label{sec:full_and_reduced_pls_regression}
+To incorporate nonlinear process behaviour, the predictor block was extended to include the quadratic terms and two-way interaction terms, giving the same nine-predictor structure used in the replicated regression models.
+The full quadratic PLS model was specified as:
+\begin{equation}
+\mathbf{Y} \sim A + B + C + A^2 + B^2 + C^2 + AB + AC + BC,
+\qquad
+\mathbf{Y} = \left(\mathrm{TSC},\,
+\mathrm{CRY},\,
+\mathrm{TPC},\,
+\mathrm{PRY}
+\right)
+\label{eq:full_pls_regression}
+\end{equation}
+
+A reduced model was also fitted, excluding the interaction terms:
+\begin{equation}
+\mathbf{Y} \sim A + B + C + A^2 + B^2 + C^2,
+\qquad
+\mathbf{Y} = \left(\mathrm{TSC},\,
+\mathrm{CRY},\,
+\mathrm{TPC},\,
+\mathrm{PRY}
+\right)
+\label{eq:reduced_pls_regression}
+\end{equation}
+
+These specifications were analogous to the full and reduced quadratic regression models given in Equations~\ref{eq:full_quadratic_model} and ~\ref{eq:red_quadratic_model}, respectively. The comparison addressed  whether including interaction terms improved predictive performance, and whether their effect differed between the carbohydrate- and protein-related response families.
+
+Two component-selection procedures were used for different purposes. For model comparison, the number of PLS components was selected within the inner loop of each outer training set in the nested LOOCV process, as described in Section~\ref{sec:nested_cross_validation}. A separate PLS model fitted to all 17 observations was used to describe the fitted model and interpret its loading structure.
+
+In both cases, the number of components was selected by minimising the mean scaled root mean squared error of prediction (RMSEP) across the four responses. For response $j$ and candidate count $K$, RMSEP was calculated using single-level LOOCV on the complete dataset:
+\begin{equation}
+\mathrm{RMSEP}_{j}(K) = \sqrt{\frac{1}{n}\sum_{i=1}^{n} \left(y_{ij}-\hat{y}_{ij}^{(-i,K)}\right)^2}
+\label{eq:pls_rmsep}
+\end{equation}
+
+where $\hat{y}_{ij}^{(-i,K)}$ is the prediction for response $j$ of observation $i$ from the $K$-component model fitted without observation $i$. Each response-specific RMSEP was divided by the corresponding full-data response standard deviation, and the mean of the four scaled values was used to compare candidate component structure.
+
+\subsection{Interpretation of Latent Components}
+\label{sec:latent_components}
+The latent components of the quadratic PLS models were interpreted using models fitted to the entire dataset. The  models fitted within the nested LOOCV procedure were used only to obtain cross-validated predictions and were not used for interpretation. The loading weights were extracted from the models to identify which were the predictor terms driving each component. The most important predictors were identified by their absolute value and variables with loading weights close to zero were considered negligible.
+
+To explore the relationships between the latent components and the experimental factors, the runs were grouped by factor level and the component scores were examined for trends. When a component was mainly related to one predictor, its scores across the corresponding factor levels were examined. When several quadratic or interaction terms contributed to a component, their combined effects were considered.
+
+\section{Ridge Regression}
+\label{sec:ridge_regression}
+Ridge regression was implemented to test whether shrinking the quadratic coefficient estimates improved predictive stability relative to ordinary quadratic regression, particularly when the interaction terms increased model complexity relative to the small number of experimental runs. The ridge models used the same predictor structures as the full and reduced quadratic models but applied coefficient shrinkage to reduce instability caused by correlated predictors and the small sample size. 
+
+Ridge regression, introduced by \parencite{Hoerl:1970}, was proposed to address potential instability in ordinary least-squares estimation, particularly under multicollinearity. With $n=17$ observations and up to nine predictors, OLS coefficient estimates may be unstable when predictors are correlated. Ridge regression addresses this problem by adding a penalty term, controlled by $\lambda$, to the least-squares objective.
+
+Ridge regression was implemented using the \texttt{glmnet} package \parencite{Friedman:2010}, with \texttt{alpha= 0} to specify a pure ridge penalty and \texttt{family = "mgaussian"} specifying a multivariate Gaussian response.
+
+\subsection{Full and Reduced Ridge Models}
+\label{sec:full_and_reduced_ridge_model}
+The full ridge model was fitted using the same nine-term predictor set as the full quadratic regression model. The reduced ridge model used the same six-term predictor set as the reduced quadratic regression model and excluded the interaction terms. Comparing the full and reduced ridge models allowed the contribution of the interactions to be assessed under regularisation and showed whether the predictive performance differed between the carbohydrate and protein response families. The ridge penalty $\lambda$ was selected using the nested LOOCV procedure described in Section~\ref{sec:nested_cross_validation}. The descriptive $\lambda$ reported for each model was the median of the 17 fold-specific values.
+
+
+\section{Prediction of Response-Derived Principal Components}
+\label{sec:response_derived_pc}
+To link the ridge regression framework with the two-component response structure identified through PCA, ridge regression was applied to principal-component scores derived from the standardised response matrix comprising TSC, CRY, TPC and PRY. The first two response-derived principal components (PC1 and PC2) were retained for interpretation. PC1 represented overall extraction performance, as all four responses loaded in the same direction. PC2 represented the contrast between the carbohydrate- and protein-related responses. The number of response components was fixed at two for both the ridge models because these components jointly accounted for 99.997\% of the response variance (Section~\ref{sec:pca}).
+
+The full response-PC ridge model used the same nine-term predictor set as the full quadratic regression model, while the reduced response-PC ridge model used the same six-term predictor set as the reduced quadratic regression model.
+
+The penalty parameter $\lambda$ was selected using the same procedure described in Section~\ref{sec:nested_cross_validation}. The final descriptive $\lambda$ value was the median of the 17 fold-specific values. As PC1 and PC2 have no physical units, their predicted PC scores were back-transformed to the original response scales using the PCA loadings, response means, and standard deviations using the same outer training fold. This produced LOOCV predictions for TSC, CRY, TPC, and PRY that were directly comparable with those from the other model families.
+
+PC1 and PC2 performance was also reported separately using the cross-validated scores before back-transformation. This supplementary diagnostic distinguished prediction of overall extraction performance (PC1) from prediction of the carbohydrate--protein contrast (PC2) but was not used for model ranking. Because the PCA component signs are arbitrary, directions were aligned across folds so that PC1 consistently represented overall extraction performance and PC2 represented the carbohydrate--protein contrast.
+
+
+\section{Robustness and Stability Analysis}
+\label{sec:robustness_analysis}
+Two further analyses were conducted to assess the robustness of the LOOCV-based comparison. The first examined robustness to predictor parameterisation. Ridge regression was repeated using a principal-component representation of the quadratic predictors to determine whether the results were affected by how the predictors were represented. The second used out-of-bag bootstrap resampling to assess the stability of model performance was across repeated samples of the data. These analyses were not used to add new models to the main comparison, but to check whether the main conclusion remained consistent under different predictor representation and repeated resampling beyond LOOCV.
+
+
+\subsection{Robustness to Predictor Parameterisation: Predictor-Derived PC-Ridge Regression}
+\label{sec:parameterisation_robustness}
+PCA was applied to the the full and reduced quadratic predictor matrices defined in Section~\ref{sec:rsm_replication}. Ridge regression was then fitted using the retained principal components rather than the original predictor terms to determine whether the ridge results depended on the representation of the predictors.
+The number of retained principal components and the ridge penalty $\lambda$ were selected jointly using the single-level LOOCV procedure described in Section~\ref{sec:nested_cross_validation}. The combination producing the lowest LOOCV RMSE was selected, and the resulting LOOCV predictions were used directly for performance assessment. In both the full and reduced cases, all available components were retained.
+
+
+\subsection{Robustness to Resampling: Out-of-Bag Bootstrap}
+\label{sec:bootstrap_resampling}
+Out-of-bag (OOB) bootstrap resampling was used as a second, independent robustness check, complementary to LOOCV, following the general bootstrap approach of \parencite{Efron:1979} to study model instability and variation in predictions. The following model families were evaluated:
+\begin{itemize}
+    \item full and reduced quadratic RSM-style regression (quadratic regression);
+    \item full and reduced quadratic PLS models;
+    \item full and reduced ridge regression models;
+    \item full and reduced response-derived (PC1 and PC2) ridge regression models.
+\end{itemize}
+
+A common set of 1,000 bootstrap index vectors, and corresponding OOB index sets were generated once and reused identically across all eight models. In each replicate, a bootstrap sample of 17 runs was drawn with replacement from the original dataset to form the in-bag sample. As sampling was done with replacement, some runs appeared more than once in a given replicate, while others did not appear at all. The runs not selected for the in-bag sample formed the OOB set for that replicate. Replicates with less than three OOB runs were discarded because performance metrics calculated from one or two observations are not meaningful.
+
+For each retained replicate, each model was refitted using the in-bag observations and then used to predict the OOB observations. Tuning parameters were held fixed at the values already established in Sections~\ref{sec:pls_regression}--\ref{sec:response_derived_pc} and were not reselected within the bootstrap. For the response-PC ridge, the response-space PCA was recalculated using the in-bag data, together with the sign-alignment procedure described in Section~\ref{sec:response_derived_pc}. The number of retained response components was fixed at two (PC1 and PC2), consistent with the primary analysis. Predictor scaling was also recalculated from the in-bag data for each replicate. For PLS, the number of components selected in the full-data analysis was held fixed across all bootstrap replicates. The bootstrap analysis therefore assessed variation in predictive performance across resamples without introducing additional variability from repeated tuning.
+
+Performance was evaluated using the OOB predictions only. RMSE, MAE, bias, and $R^2$ were calculated for each response, together with scaled RMSE and scaled MAE. The scaled bootstrap metrics used the standard deviation of each response, calculated once from the complete original 17-run dataset and held fixed across all replicates and models. Bootstrap performance was summarised for each model and response using the mean and standard deviation of each metric across the retained replicates. To compare all models using identical resamples, the summary was based on the subset of replicates completed successfully by every model (the common-successful replicates). The mean scaled RMSE was then averaged across all four responses to provide an overall bootstrap comparison, and separately across the carbohydrate responses (TSC and CRY) and protein responses (TPC and PRY)to provide response-family comparisons. Bootstrap-based model rankings were interpreted alongside the LOOCV results, providing complementary evidence on both predictive accuracy and stability of model performance across repeated resampling.
+
+\section{Model Evaluation and Comparison}
+\label{sec:model_evaluation_and_comparison}
+The comparison was carried out at five levels: individual responses, the carbohydrate-response family (TSC and CRY), the protein-response family (TPC and PRY), all four responses overall, and the response-PC level where applicable. The main evaluation measures were LOOCV RMSE, LOOCV MAE, scaled LOOCV RMSE, and predictive $Q^2$, with bias used as a supporting diagnostic. The final model comparison included the following approaches:
+\begin{itemize}
+    \item full and reduced quadratic RSM-style regression (quadratic regression);
+    \item full and reduced quadratic PLS models;
+    \item full and reduced ridge regression models;
+    \item full and reduced response-derived (PC1 and PC2) ridge regression models.
+\end{itemize}
+
+Predictor-PC ridge was evaluated separately as a supplementary robustness analysis and was not included in the final comparison. MANOVA assessed multivariate significance rather than the predictive performance and was therefore evaluated separately.
+Given the limited number of runs ($n=17$), partitioning the data into separate training and test sets would have used the available data inefficiently and produced unstable test-set estimates. LOOCV was therefore used as the primary internal validation procedure, and no claim of external validation is made. Bootstrap resampling supplemented the model comparison. With LOOCV, all data-dependent processing and tuning, including centring and scaling, PCA transformations, PLS component selection, and ridge-penalty selection, used only the training observations in each outer fold. Held-out observations were used only to evaluate performance.
+The modelling framework was designed to determine whether increasing polynomial complexity, modelling the responses jointly, or applying regularisation improved predictive performance in this small-sample experimental setting, and whether these effects differed between carbohydrate and protein extraction outcomes.
+
+\subsection{Predictive Verification at Process Optimum}
+\label{sec:predictive_verification}
+An independent experimental confirmation was performed at the optimum conditions of 88\% amplitude, 12 min extraction time, and a 3\% solid-to-solvent ratio (coded as $A=0.8$, $B=0.4$, $C={-1}$) reported in the source study. This confirmation run was a separate experiment and was not among the 17 runs used to fit any of the candidate models. Each principal candidate model was refitted using the complete data set and used to predict the four responses at this confirmation condition. These predictions were compared primarily with the experimentally observed values. As a secondary check, they were also compared with the RSM predictions reported in the source study. Prediction error, absolute error, and APE were calculated for each response, and the mean APE across the four responses summarised each model's overall accuracy at this condition. The experimental standard deviation was reported alongside each observed value for context because it represented variation among replicate measurements at the same condition rather than variation among experimental conditions.
+
+\chapter{Results}
+This chapter presents the results obtained using the statistical modelling framework described in Chapter 3. The results are reported separately for the carbohydrate-related responses (TSC and CRY) and the protein-related responses (TPC and PRY), consistent with the family-wise comparison framework established in Section~\ref{sec:experimental_design}. This allowed assessment of whether the response families required or benefited from the same level of model complexity.
+
+\section{Data Screening and Response Correlations}
+\label{sec:data_screening}
+The dataset comprised the 17 experimental runs shown in Table~\ref{tab:experimental_values}, and no missing values were identified. The distributions and scales of the four response variables were examined using the pre-processing procedure described in Section~\ref{sec:exploratory_data_analysis}.
+
+The four responses differed in scale before standardisation. TSC values ranged from 170.8 to 435.5 mg glucose equivalents/g, whereas TPC values ranged from 9.9 to 51.7 mg bovine serum albumin equivalents/g. Because the responses were measured on different numerical scales, model comparisons used scaled-error metrics rather than raw RMSE. Boxplots of the raw and standardised responses are provide in Figure~\ref{fig:boxplots_raw_standardised} in Appendix~\ref{app:model_results}. Three observations exceeded the upper boxplot whiskers for both TSC and CRY (Runs 9, 10 and 12). These were not treated anomalous because all three corresponded to the lowest solid-to-solvent ratio setting in the design with value of 3\%. TPC and PRY had no observations beyond the boxplot whiskers.
+
+Table~\ref{tab:correlation_matrix} presents the Pearson correlation matrix for the three process variables and the four responses; the corresponding scatterplot matrix is provided in Figure~\ref{fig:scatterplot} in Appendix~\ref{app:model_results}. The pairwise sample correlations among amplitude, time, and solid-to-solvent ratio were all $r=0.000$, as expected from the balanced Box--Behnken design, in which the coded process factors were mutually uncorrelated. Among the process variables, solid-to-solvent ratio showed the strongest relationships with the responses. It was strongly negatively correlated with TSC ($r=-0.934$) and CRY ($r=-0.933$) and moderately negatively correlated with TPC ($r=-0.523$) and PRY ($r=-0.525$). Amplitude and time showed only weak correlations with the four responses.
+
+The responses also showed strong relationships within the family. TSC and CRY were almost perfectly correlated ($r= 0.99997$), while TPC and PRY showed a similarly strong correlation ($r= 0.9999$). The more cross-family correlations between the carbohydrate and protein responses were approximatey approximately 0.72--0.73. These values indicated strong positive relationships, although they were weaker than the within-family correlations. This pattern suggested that the responses shared a common component of overall extraction performance while retaining distinct carbohydrate--protein variation.
+
+\begin{table}[H]
+\centering
+\caption{Pearson correlation matrix among the coded process variables and the four response variables.}
+\label{tab:correlation_matrix}
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{} & \textbf{Amplitude} & \textbf{Time} & \textbf{Ratio} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+\midrule
+Amplitude & 1.000 & 0.000 & 0.000 & 0.238 & 0.240 & 0.150 & 0.150 \\
+Time & 0.000 & 1.000 & 0.000 & 0.040 & 0.039 & 0.118 & 0.116 \\
+Ratio & 0.000 & 0.000 & 1.000 & -0.934 & -0.933 & -0.523 & -0.525 \\
+TSC & 0.238 & 0.040 & -0.934 & 1.000 & 1.000 & 0.724 & 0.726 \\
+CRY & 0.240 & 0.039 & -0.933 & 1.000 & 1.000 & 0.724 & 0.725 \\
+TPC & 0.150 & 0.118 & -0.523 & 0.724 & 0.724 & 1.000 & 1.000 \\
+PRY & 0.150 & 0.116 & -0.525 & 0.726 & 0.725 & 1.000 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{PCA of Response Matrix}
+\label{sec:pca}
+PCA of the standardised response matrix showed that the four responses (TSC, CRY, TPC, and PRY) were effectively represented by two principal components. PC1 and PC2 together accounted for 99.997\% of the total variance, explaining 86.2\% and 13.8\%, respectively. PC3 and PC4 accounted for only 0.003\% of the total variance combined and were therefore excluded from subsequent interpretation \parencite{Jolliffe:2002}.
+
+All four responses loaded almost identically on PC1, with loadings of approximately 0.500 for TSC, CRY, TPC, and PRY. PC1 was therefore interpreted as representing overall extraction performance. PC2 showed opposite loading patterns for the two response families. The carbohydrate responses had negative loadings ($TSC =-0.499$, $CRY=-0.501$), whereas the protein responses had positive loadings ($TPC=0.501$, $PRY=0.499$). PC2 was therefore interpreted as representing a contrast between carbohydrate- and protein-related extraction outcomes.
+Because the signs of PCA loadings are arbitrary, PC2 was interpreted from the opposing sign pattern between the two response families rather than on the absolute choice of positive or negative directions \parencite{Jolliffe:2002}.
+
+To characterise the process effects driving each component, PC1 and PC2 were each regressed on the coded process variables using the same second-order structure as the RSM models in Section~\ref{sec:rsm_replication}. These regressions were used to describe process effects and were distinct from the cross-validated ridge models used for predictive assessment.
+PC1 was associated with all three process variables and their quadratic effects (adjusted $R^2 = 0.985$), consistent with its interpretations as a component representing overall extraction performance. PC2 was most strongly associated with the solid-to-solvent ratio and quadratic curvature in the process variables (adjusted $R^2$ = 0.933), consistent with its interpretation as a carbohydrate--protein contrast. The complete regression coefficients and significance tests for both components are provided in Table~\ref{tab:pc1_regression} and Table~\ref{tab:pc2_regression} in Appendix~\ref{app:pc_regression_coefficients}.
+
+
+\section{Response-Specific Quadratic Regression Models}
+\label{sec:response_specific_quadratic_regression}
+\subsection{Full Quadratic Model}
+\label{sec:full_quad_model}
+The full quadratic model defined in Equation~\ref{eq:full_quadratic_model} was fitted separately to each response using the coded process variables. All four models fitted the training data closely, with $R^2$ values of 0.9993 for TSC, 0.9994 for CRY, 0.9817 for TPC, and 0.9810 for PRY. The overall model tests were statistically significant in all four cases (all $p<0.0001$). The solid-to-solvent ratio factor ($C$) and all three quadratic terms were significant for every response, demonstrating curvature in the response surfaces. Among the two-factor interaction terms, only the $A:C$ interaction was statistically significant for the car bohydrate responses. In contrast, the $A:C$ coefficients for TPC and PRY were small and non-significant throughout. Full coefficient estimates, standard errors, and significance levels are provided in Table~\ref{tab:full_quadratic_coefficients} in Appendix~\ref{app:quad_regression_model}.
+
+Figure~\ref{fig:LOOCV_predicted_vs_observed_full_quad} shows observed versus LOOCV-predicted values for the full quadratic regression model. The TSC and CRY predictions lie close to the $1{:}1$ line across the observed range. TPC and PRY show visibly greater scatter, consistent with their lower $Q^2$ values of approximately 0.79, compared with values greater than 0.998 for TSC and CRY.
+
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/LOOCV_predicted_vs_observed_full_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus LOOCV-predicted values for the full quadratic regression model.}
+\label{fig:LOOCV_predicted_vs_observed_full_quad}
+\vspace{0.5em}
+\hrule   
+\end{figure}
+
+\label{fig:obs_vs_fitted_full_quad_reg}
+Observed-versus-fitted plots for the full quadratic regression model are provided in Figure~\ref{fig:obs_vs_fitted_full_quad_reg} in Appendix~\ref{app:quad_regression_model}.
+
+
+\subsection{Reduced Quadratic Model}
+\label{sec:red_quad_model}
+The reduced quadratic model in Equation~\ref{eq:red_quadratic_model}, which excluded the two-way interaction terms, was fitted using the same procedure. Training $R^2$ decreased for all four responses relative to the full model. The largest reductions occurred for TSC, from 0.9993 to 0.9955, and CRY, from 0.9994 to 0.9951. The reductions were smaller for TPC, from 0.9817 to 0.9805, and PRY, from 0.9810 to 0.9799. The linear coefficient for extraction time ($B$) showed the opposite significance pattern to that observed in the full model. It was non-significant for TSC and CRY but significant for TPC and PRY. Complete coefficient estimates, standard errors, and significance levels are provided in Table~\ref{tab:reduced_quadratic_coefficients} in Appendix~\ref{app:quad_regression_model}.
+
+Figure~\ref{fig:LOOCV_predicted_vs_observed_red_quad} shows observed versus LOOCV-predicted values for the reduced quadratic regression model. Relative to the full model, TSC and CRY show slightly more scatter, whereas TPC and PRY show less scatter, reflecting the trade-off between the two response families.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/LOOCV_predicted_vs_observed_red_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus LOOCV-predicted values for the reduced quadratic regression model.}
+\label{fig:LOOCV_predicted_vs_observed_red_quad}
+\vspace{0.5em}
+\hrule   
+\end{figure}
+
+Observed-versus-fitted plots for the reduced quadratic regression models are provided in Figure~\ref{fig:obs_vs_fitted_red_quad_reg} in Appendix~\ref{app:quad_regression_model}.
+
+\subsection{Training and LOOCV Performance: Full versus Reduced}
+\label{sec:model_structure_comparison}
+Table~\ref{tab:full_vs_reduced_quad_model_comp} compares the training and leave-one-out cross-validated performance of the full and reduced response-specific quadratic models for all four responses.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Training and leave-one-out cross-validation performance of the full and reduced quadratic regression models for the four responses.}
+\label{tab:full_vs_reduced_quad_model_comp}
+\begin{tabular}{llcccccccc}
+\toprule
+\textbf{Response} & \textbf{Model} & \makecell{\textbf{Train}\\\textbf{RMSE}} & \makecell{\textbf{Train}\\\textbf{$R^2$}} & 
+\makecell{\textbf{LOOCV}\\\textbf{RMSE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} & \makecell{\textbf{LOOCV}\\\textbf{MAE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV MAE}} & \makecell{\textbf{LOOCV}\\\textbf{Bias}} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & Full & 2.009 & 0.999 & 3.015 & 0.038 & 2.356 & 0.029 & $\approx 0$ & 0.999 \\
+    TSC & Reduced & 5.220 & 0.996 & 9.981 & 0.124 & 7.815 & 0.097 & $\approx 0$ & 0.984 \\
+    \midrule
+    CRY & Full & 0.384 & 0.999 & 0.519 & 0.033 & 0.344 & 0.022 & $\approx 0$ & 0.999 \\
+    CRY & Reduced & 1.058 & 0.995 & 2.031 & 0.130 & 1.568 & 0.101 & $\approx 0$ & 0.982 \\
+    \midrule
+    TPC & Full & 1.698 & 0.982 & 5.743 & 0.444 & 4.641 & 0.359 & $\approx 0$ & 0.790 \\
+    TPC & Reduced & 1.749 & 0.981 & 3.165 & 0.245 & 2.547 & 0.197 & $\approx 0$ & 0.936 \\
+    \midrule
+    PRY & Full & 1.927 & 0.981 & 6.475 & 0.449 & 5.277 & 0.366 & $\approx 0$ & 0.786 \\
+    PRY & Reduced & 1.984 & 0.980 & 3.577 & 0.248 & 2.912 & 0.202 & $\approx 0$ & 0.935 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Removing the interaction terms had opposite effects on the two response families. For TSC and CRY, predictive performance deteriorated. LOOCV $Q^2$ decreased from 0.999 to 0.984 for TSC and from 0.999 to 0.982 for CRY. This indicates that the $A:C$ interaction contributed useful predictive information for the carbohydrate responses.
+
+Reducing the model improved prediction for TPC and PRY. LOOCV $Q^2$ increased from 0.790 to 0.936 for TPC and from 0.786 to 0.935 for PRY. This shows that the interaction terms added little useful predictive information for the protein responses and instead degraded the cross-validated performance.
+
+LOOCV bias was effectively zero for both model specifications across all four responses, with values of the order of $10^{-14}$ to $10^{-15}$. This indicated an absence of systematic directional bias.
+
+Among the models evaluated, no single specification was optimal across both response families. Retaining the interaction terms improved cross-validated prediction for the carbohydrate responses but worsened it for the protein responses, indicating that the two response families required different levels of model complexity.
+The evidence supporting the choice of model structure for each response family is summarised in Table~\ref{tab:model_structure_choice}.
+
+\begin{table}[H]
+\centering
+\caption{Evidence supporting response-family-specific model-structure selection.}
+\label{tab:model_structure_choice}
+\begin{tabular}{lll}
+\toprule
+\textbf{Evidence} & \textbf{TSC/CRY} & \textbf{TPC/PRY} \\
+\midrule
+$A:C$ interaction & Significant & Non-significant \\
+Effect of removing interactions on LOOCV & Performance worsens & Performance improves \\
+Influence diagnostics & Sensitivity increases & Sensitivity decreases\\
+Preferred model structure & Full quadratic & Reduced quadratic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Diagnostics}
+\label{sec:diagnostics}
+Residual-versus-fitted plots and Cook's distance were examined for the full and reduced quadratic regression models, using the screening threshold described in Section~\ref{sec:inf_diagnostics}. The corresponding diagnostic plots and Cook's distance values are provided in Appendix~\ref{app:diagnostics}.No systematic pattern was evident in the residuals for either model. 
+
+Removing the interaction terms changed the influence pattern across the two response families. Sensitivity to individual runs increased for the carbohydrate responses but decreased for the protein responses. This pattern was consistent with the LOOCV results in Section~\ref{sec:model_structure_comparison}. The full model performed better for TSC and CRY, whereas the reduced model performed better for TPC and PRY. None of the flagged observations showed evidence of a data-entry or measurement error. All 17 experimental runs were therefore retained in the subsequent analyses.
+
+\section{Multivariate Analysis of Variance}
+\label{sec:manova_res}
+MANOVA was used as a complementary analysis to assess the joint effects of the process factors across all four responses. The solid-to-solvent ratio factor ($C$) and the quadratic terms showed statistically significant multivariate effects (Pillai's trace, $p < 0.05$). Adding the two-way interaction terms as a block did not significantly improve the joint fit. These findings were consistent with the PCA and RSM results. Full test statistics, and $p$-values for all three nested comparisons are provided in Appendix~\ref{app:manova}.
+
+\section{Partial Least Squares}
+\label{sec:PLS}
+
+\subsection{Linear PLS Model}
+\label{sec:linear_pls}
+An initial linear PLS regression model was fitted using the three coded process variables, $A$, $B$, and $C$, as predictors, as specified in Equation~\ref{eq:linear_pls_regression}. One latent component was retained by minimising the mean scaled RMSEP. Linear PLS predicted TSC and CRY reasonably well, with $Q^2$ $\approx 0.83$, but performed poorly for TPC and PRY, for which $Q^2 \approx 0.09$. These results confirmed the need for nonlinear process terms. Full training and LOOCV performance results are provided in Table~\ref{tab:linear_model_performance}, and the loading weights are discussed in Appendix~\ref{app:pls_model}.
+
+\subsection{Full Quadratic PLS Model}
+\label{sec:full_quad_pls}
+ The full quadratic PLS model, extended the predictor block to include the quadratic and two-factor interaction terms, providing the same nine-term predictor structure used in the full quadratic regression models described in Section~\ref{sec:full_quad_model}. Five components were retained. The full and reduced quadratic PLS models reproduced the errors of the corresponding quadratic regression models almost exactly. Thus, joint-response modelling did not materially improve predictive performance relative to fitting each response separately.
+ 
+Component 1 represented an overall extraction-performance axis, dominated by the solid-to-solvent ratio term ($C$), with all four responses loading positively. Component 2 differentiated the carbohydrate and protein responses and was driven mainly by the quadratic amplitude and time effects rather than by any linear term. Components 3--5 provided smaller additional reductions in LOOCV error but were not assigned distinct process interpretations.
+
+Training $R^2$ exceeded 0.98 for every response. Scaled LOOCV RMSE was very low for TSC and CRY (0.037 and 0.033, respectively) but higher for TPC and PRY (0.444 and 0.449, respectively). LOOCV bias was small throughout, indicating no meaningful systematic over prediction or under prediction for any response. Predictive $Q^2$ was approximately 0.999 for TSC and CRY, but only 0.791 for TPC and 0.786 for PRY, confirming that the model's predictive strength, not just its training fit, was weaker for protein responses. Full performance tables, loading weights, and the component score-plot analysis are provided in Appendix~\ref{app:pls_model}.
+
+\subsection{Reduced Quadratic PLS Model}
+\label{sec:red_quad_pls}
+The reduced quadratic PLS model excluded the two-factor interaction terms and retained only the linear and quadratic process-variable terms. Four components were retained for the reduced model.
+
+Training $R^2$ exceeded 0.97 for every response. Relative to the full model, scaled LOOCV RMSE increased for TSC and CRY but decreased substantially for TPC and PRY. Predictive $Q^2$ remained high for TSC and CRY, although it decreased relative to that of the full model; for TPC and PRY there was a huge improvement from 0.790 to about 0.936. The LOOCV bias values were small for all four responses, indicating negligible systematic over prediction or under prediction. Full performance tables, and loading weights are provided in Appendix~\ref{app:pls_model}.
+
+\section{Ridge Regression}
+\label{sec:ridge_res}
+\subsection{Full Quadratic Ridge Regression}
+\label{sec:full_quad_ridge_reg}
+The full quadratic ridge model applied shrinkage to all nine predictor coefficients. Across the 17 outer folds, the selected values of the penalty parameter $\lambda$ ranged from 0.0385 to 0.206, with a median of 0.118, used to fit the full-data model. The coefficient pattern was consistent with the quadratic regression and PLS results. Solid-to-solvent ratio ($C$) had the largest effect for every response, followed by the quadratic terms, while $A:C$ was more important for the carbohydrate responses than for the protein responses. The complete standard coefficients are provided in Table~\ref{tab:full_quad_ridge_coef} in Appendix~\ref{app:ridge_coefficients}. As the primary purpose of ridge regression was to improve generalisation rather than training fit, only its LOOCV performance is reported in (Table~\ref{tab:full_ridge_loocv}). 
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Nested LOOCV performance of the full quadratic ridge regression (median $\lambda = 0.118$).}
+\label{tab:full_ridge_loocv}
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Response} & \textbf{LOOCV RMSE} & \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} & \makecell{\textbf{LOOCV}\\\textbf{MAE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV MAE}} & \makecell{\textbf{LOOCV}\\\textbf{Bias}} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & 6.158 & 0.077 & 4.741 & 0.059 & -0.283 & 0.994 \\
+CRY & 1.156 & 0.074 & 0.916 & 0.059 & -0.056 & 0.994 \\
+TPC & 5.774 & 0.447 & 4.727 & 0.368 & -0.030 & 0.788 \\
+PRY & 6.505 & 0.451 & 5.354 & 0.371 & -0.034 & 0.784 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Compared with the full quadratic regression and PLS models, which had $Q^2$ values of 0.998--0.999 for TSC and CRY, the ridge model performed slightly less well ($Q^2 \approx 0.994$), although its predictive performance remained strong. This reduction is consistent with shrinkage of $A:C$ interaction, which contributed useful predictive information for these responses. For TPC and PRY, the interaction coefficients were much smaller, and ridge produced $Q^2$ values of 0.788 and 0.784, close to those of the full quadratic regression and PLS models. These results indicate that regularisation alone could not fully compensate for unnecessary model structure. Although ridge  reduced the size of the coefficients, retaining the interaction terms continued to limit predictive performance, particularly for TPC and PRY.
+
+\subsection{Reduced Quadratic Ridge Regression}
+\label{sec:red_quad_ridge_reg}
+The reduced quadratic ridge model applied the same nested LOOCV procedure to the six-term predictor set. The selected $\lambda$ values ranged from 0.014 to 0.098 across the 17 outer folds, with a median of 0.046. The coefficients changed only slightly after the interaction terms were removed, indicating that the main and quadratic effects were largely preserved. The complete standardised coefficients are provided in Table~\ref{tab:red_quad_ridge_coef} in Appendix~\ref{app:ridge_coefficients}.
+Table~\ref{tab:reduced_ridge_loocv} shows the nested LOOCV predictive performance of the reduced quadratic ridge regression model for each of the four responses.
+
+\begin{table}[H]
+\centering
+\caption{Nested LOOCV performance of the reduced quadratic ridge regression (median $\lambda = 0.046$).}
+\label{tab:reduced_ridge_loocv}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Response} & \textbf{LOOCV RMSE} & \textbf{Scaled LOOCV RMSE} & \textbf{LOOCV Bias} & \textbf{Predictive $Q^2$} \\
+\midrule
+TSC & 9.987 & 0.124 & 0.141 & 0.984 \\
+CRY & 2.034 & 0.130 & 0.027 & 0.982 \\
+TPC & 3.111 & 0.241 & 0.022 & 0.938 \\
+PRY & 3.517 & 0.244 & 0.026 & 0.937 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Removing the interaction terms reduced $Q^2$ for TSC and CRY from 0.994 to 0.984 and from 0.994 to 0.982, respectively. In contrast, $Q^2$ increased for TPC and PRY from 0.788 to 0.938 and from 0.784 to 0.937, respectively. This was the largest response-family difference observed across the model comparisons.
+
+Figure~\ref{fig:LOOCV_predicted_vs_observed_red_ridge} shows the observed versus LOOCV-predicted values for the reduced ridge model. The pattern closely resembles the reduced quadratic regression and reduced response-PC ridge plots, consistent with the similar scaled RMSE achieved for all three models.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/LOOCV_predicted_vs_observed_red_ridge.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus LOOCV-predicted values for the reduced ridge model}
+\label{fig:LOOCV_predicted_vs_observed_red_ridge}
+\vspace{0.5em}
+\hrule   
+\end{figure}
+
+No single ridge model performed best for all four responses. The reduced model performed much better for the protein responses, while causing a small decrease in performance for the carbohydrate responses. The preferred ridge model depended on the response family. Across both models, ridge retained the same coefficient pattern as quadratic regression, including a larger $A:C$ contribution for the carbohydrate responses.
+
+
+\section{Response Derived PC-Ridge Regression}
+\label{sec:response_pc_ridge_reg}
+Rather than reducing the predictor set, this model reduced the four correlated responses (TSC, CRY, TPC, and PRY) to two orthogonal principal components (PCs). PC1 represented the overall extraction while PC2 represented the contrast between the carbohydrate and protein responses.
+
+\subsection{Full and Reduced Quadratic Response-PC Ridge}
+\label{sec:response_pc_ridge}
+The nested procedure selected a median $\lambda$ of 0.0011 for the full model and 0.0072 for the reduced model. These values were lower than the corresponding penalties for standard ridge (0.118 and 0.046) and predictor-PC ridge penalties (0.298 and 0.142).
+Table~\ref{tab:response_pc_ridge_loocv} shows the nested LOOCV predictive performance of the full and reduced quadratic response-PC ridge models for each response.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Nested LOOCV performance of the full and reduced quadratic response-PC ridge models.}
+\label{tab:response_pc_ridge_loocv}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Response} & \textbf{Model} & \textbf{LOOCV RMSE}& \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} & \textbf{LOOCV Bias} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & Full & 2.931 & 0.037 & -0.261 & 0.999 \\
+TSC & Reduced & 10.095 & 0.126 & 0.128 & 0.983 \\
+CRY & Full & 0.586 & 0.038 & -0.056 & 0.999 \\
+CRY & Reduced & 2.025 & 0.130 & 0.020 & 0.982 \\
+TPC & Full & 5.744 & 0.444 & -0.059 & 0.790 \\
+TPC & Reduced & 3.142 & 0.243 & 0.024 & 0.937 \\
+PRY & Full & 6.428 & 0.446 & -0.067 & 0.789 \\
+PRY & Reduced & 3.537 & 0.245 & 0.027 & 0.936 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the response level, the $Q^2$ values followed the same pattern as those of quadratic regression, PLS and plain ridge under the corresponding full and reduced models. Reducing the four responses to two components therefore retained most of the predictive information.
+
+At the component level, in the full model, PC1 was predicted far more accurately than PC2. PC1 achieved a $Q^2$ and $R^2$ of 0.949, a bias of $-0.013$, and an RMSE of 0.452. PC2 had a $Q^2$ of 0.687, an $R^2$ of 0.736, a bias of $-0.005$, and a similar RMSE of 0.450. Removing the interaction terms improved PC2 sharply to $Q^2 = 0.905$, while PC1 barely changed to  $Q^2 = 0.977$. These results show that overall extraction performance was highly predictable under both model structures, whereas prediction of the carbohydrate--protein balance was more sensitive to model structure.
+
+Figure~\ref{fig:LOOCV_predicted_vs_observed_response_pc_ridge} shows the observed versus LOOCV-predicted values for the reduced model. The TSC and CRY predictions lie close to the $1{:}1$ line, whereas TPC and PRY show greater deviations, indicating comparatively lower predictive accuracy for the protein responses.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/LOOCV_predicted_vs_observed_response_pc_ridge.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus LOOCV-predicted values, reduced quadratic response-PC ridge model}
+\label{fig:LOOCV_predicted_vs_observed_response_pc_ridge}
+\vspace{0.5em}
+\hrule   
+\end{figure}
+
+\section{Robustness and Stability Analysis}
+\label{sec:robustness_and_stability}
+Beyond LOOCV, two further checks were used to assess the robustness of the model comparisons presented in Sections~\ref{sec:response_specific_quadratic_regression}, \ref{sec:PLS}, \ref{sec:ridge_res}, \ref{sec:response_pc_ridge_reg}. These analyses examined whether the conclusions from LOOCV were maintained after predictor reparameterisation and repeated resampling of the experimental data.
+
+\subsection{Robustness to Predictor Parameterisation: Predictor-Derived PC-Ridge Regression}
+\label{sec:robustness_predictor_parameterisation}
+Reparameterising the quadratic predictors through PCA produced essentially unchanged ridge performance for both the full and reduced predictor sets (Appendix~\ref{app:robustness_and_stability}), indicating that the main findings were not driven by predictor representation.
+
+\subsection{Robustness to Resampling: Out-Of-Bag Bootstrap}
+\label{sec:oob_bootstrap}
+The bootstrap analysis reproduced the response-family-specific complexity result. All reduced models outperformed their full counterparts for the protein responses, with scaled RMSE values ranging from 0.363 to 0.481, compared to 0.546 to 0.814 for the full models. This consistent pattern showed that removing the interaction terms improved predictive performance for protein responses.
+
+The results for the carbohydrate responses were less consistent. The full quadratic regression achieved the lowest scaled RMSE, at 0.171, outperforming the reduced models, which ranged from 0.197 to 0.237. The full ridge, full quadratic PLS, and full response-PC ridge models had higher scaled RMSE values of 0.533 to 0.629 under bootstrap resampling.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Bootstrap performance by response family, reported as mean $\pm$ SD across 966 common-successful replicates.}
+\label{tab:bootstrap_response_family}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \makecell{\textbf{Carb.}\\\textbf{Scaled RMSE}} & \makecell{\textbf{Protein}\\\textbf{Scaled RMSE}} & \makecell{\textbf{Overall}\\\textbf{Scaled RMSE}} \\
+\midrule
+Reduced Response-PC Ridge & $0.200 \pm 0.203$ & $0.363 \pm 0.212$ & $0.282 \pm 0.189$ \\
+Reduced Ridge & $0.219 \pm 0.208$ & $0.364 \pm 0.214$ & $0.292 \pm 0.191$ \\
+Reduced Quadratic Regression & $0.197 \pm 0.160$ & $0.438 \pm 0.383$ & $0.318 \pm 0.261$ \\
+Full Quadratic Regression & $0.171 \pm 0.178$ & $0.546 \pm 0.364$ & $0.359 \pm 0.253$ \\
+Reduced Quadratic PLS & $0.237 \pm 0.212$ & $0.481 \pm 0.266$ & $0.359 \pm 0.204$ \\
+Full Response-PC Ridge & $0.533 \pm 0.382$ & $0.810 \pm 0.372$ & $0.671 \pm 0.330$ \\
+Full Quadratic PLS & $0.569 \pm 0.351$ & $0.814 \pm 0.364$ & $0.692 \pm 0.311$ \\
+Full Ridge & $0.629 \pm 0.306$ & $0.794 \pm 0.363$ & $0.711 \pm 0.293$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For the protein responses, reduced response-PC ridge, reduced ridge, and reduced quadratic pls were more stable across resamples than their full counterparts, with standard deviations ranging from 0.212 to 0.266. Reduced quadratic regression was the exception. Its standard deviation was 0.383, slightly higher than the value of 0.364 for full quadratic regression. For the carbohydrate responses, full quadratic regression showed similar variability to that ofthe reduced models, while the other full models had higher standard deviations, ranging from 0.306 to 0.382. Since the penalty parameters and number of retained components were fixed throughout the bootstrap analysis, these differences in variability reflect the resampling stability of the fitted model structures. Bootstrap success rates and OOB-size diagnostics are provided in Appendix~\ref{app:robustness_and_stability}.
+
+\section{Overall Model Comparison}
+Table~\ref{tab:loocv_response_family} ranks the eight models by LOOCV performance, averaged within the carbohydrate responses (TSC and CRY) and the protein responses (TPC and PRY).
+
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{LOOCV response-family comparison, ranked by overall scaled RMSE.}
+\label{tab:loocv_response_family}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \makecell{\textbf{Carb.}\\\textbf{Scaled RMSE}} & \makecell{\textbf{Protein}\\\textbf{Scaled RMSE}} & \makecell{\textbf{Overall}\\\textbf{Scaled RMSE}} \\
+\midrule
+Reduced Ridge & 0.127 & 0.242 & 0.185 \\
+Reduced Response-PC Ridge & 0.128 & 0.244 & 0.186 \\
+Reduced Quadratic PLS & 0.127 & 0.246 & 0.187 \\
+Reduced Quadratic Regression & 0.127  & 0.246 & 0.187 \\
+Full Quadratic PLS & 0.035 & 0.446 & 0.241 \\
+Full Quadratic Regression & 0.035 & 0.447 & 0.241 \\
+Full Response-PC Ridge & 0.037 & 0.445 & 0.241 \\
+Full Ridge & 0.075 & 0.449 & 0.262 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under LOOCV, the four reduced models showed very similar overall performance with scaled RMSE values ranging from 0.185 to 0.187. All full models containing interaction terms had moderately higher overall scaled RMSE value, mainly due to the higher errors for the TPC and PRY responses. However, full quadratic regression provided the most accurate predictions for the carbohydrate responses. These results confirm that no single model structure was optimal for both biochemical families.
+
+PLS, ridge and response-PC ridge did not improve on the corresponding quadratic regression models. If a common model is required for all four responses, reduced quadratic regression provides the preferred balance of prediction, parsimony and direct process interpretation. When the response families are modelled separately, the evidence favours a full quadratic structure for carbohydrates and reduced quadratic structure for protein responses.
+
+\section{Predictive Verification at Process Optimum}
+\label{sec:confirmation_predictions}
+Table~\ref{tab:confirmation_predictions} compares the experimental observed confirmation-run values with predictions from the principal candidate models after they were refitted on the complete 17 run dataset.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Confirmation-run predictions versus observed values for principal candidate models.}
+\label{tab:confirmation_predictions}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Response} & \textbf{Observed ($\pm$ SD)} & \makecell{\textbf{Full Quad.}\\\textbf{Regression}} & \makecell{\textbf{Reduced Quad.}\\\textbf{Regression}} & \textbf{Reduced Ridge} & \makecell{\textbf{Reduced}\\\textbf{Response-PC Ridge}} \\
+\midrule
+TSC & $431.09 \pm 17.48$ & 435.81 & 428.50 & 421.88 & 428.62 \\
+CRY & $83.39 \pm 3.38$ & 84.57 & 83.08 & 81.79 & 83.03 \\
+TPC & $50.98 \pm 1.29$ & 51.03 & 51.00 & 50.11 & 50.96 \\
+PRY & $56.64 \pm 1.43$ & 56.92 & 56.82 & 55.83 & 56.85 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Reduced quadratic regression and reduced response-PC ridge produced the most accurate predictions at the confirmation condition, with mean APEs of 0.33\% and 0.35\%, respectively. Full quadratic regression had a mean APE of 0.78\% and reduced ridge showed the highest error at 1.79\%. Although the absolute errors were small for all models, the ranking at this condition differed from the ratings obtained through LOOCV and bootstrap resampling. The internal validation results remained the primary basis for model assessment because they evaluated performance across multiple resamples or held-out observations. The confirmation results show that rankings established through internal validation do not necessarily hold at a single new environmental condition.
+
+As an additional implementation check, the full quadratic regression predictions obtained here were close to the RSM predictions reported in the source experiment, differing by only 0.25, 0.02, 0.71, and 0.58 for TSC, CRY, TPC, and PRY, respectively. This shows that the full quadratic regression was implemented consistently with the RSM model used in the source analysis.
+
+
+
+\chapter{Discussion}
+\section{Summary}
+This dissertation evaluated different statistical modelling methods for a small experimental dataset comprising 17 runs, with particular emphasis on whether more flexible or regularised methods offered an advantage over RSM. The quadratic RSM regression model was reproduced and used as the benchmark. The results provided no evidence of a consistent predictive advantage for the alternative methods. In particular, the full PLS, full ridge regression, and full response-PC ridge models did not consistently improve predictive accuracy relative to the full quadratic regression model. 
+
+The comparison also showed that the appropriate level of model complexity differed among the responses. The carbohydrate responses (TSC and CRY) benefited from retaining interaction terms, whereas protein responses(TPC and PRY) were predicted more accurately by reduced models without interactions. This pattern was observed across the main LOOCV comparisons and was supported by the bootstrap analysis. A single independent experimental confirmation run provided an additional point-specific assessment of the model predictions and is considered alongside the robustness analyses in Section~\ref{sec:discussion_robustness}.
+
+
+\section{Need for a Quadratic model Structure}
+Before the full and reduced quadratic models were compared, the ability of a linear model to describe the process adequately was examined. The linear model was not sufficient, although the extent of this limitation differed among the four responses. The linear PLS model predicted the carbohydrate responses well but performed poorly for the protein responses. This finding was consistent with the curvature identified during the exploratory analysis and supported the need for quadratic terms in the models under consideration.
+
+The further analysis examined whether including interaction terms improved prediction accuracy within the quadratic structure and whether more flexible or regularised methods offered additional predictive value.
+
+
+\section{Response-Specific Model Complexity}
+The interaction between amplitude ($A$) and solid-to-solvent ratio ($A:C$), was significant for the carbohydrate responses but not for the protein responses. The same pattern was observed for both the regression coefficients and the MANOVA, where this was the only interaction term that had a significant effect after the quadratic terms were included. This response-family difference remained under bootstrap resampling.
+
+The carbohydrate--protein distinction was present across multiple analyses, including the regression coefficients, MANOVA, LOOCV comparisons of quadratic regression, PLS, ridge, response-PC ridge, predictor-PC ridge, and bootstrap resampling. These results show that the predictive value of the interaction terms depended on the response being predicted.
+
+This pattern is consistent with previous research on the same seaweed species using deep eutectic solvents, which showed different extraction behaviour for proteins and carbohydrates under the conditions studied \parencite{Moldes:2024}. The present analysis extends these findings by showing that the response families differed not only in extraction magnitude but also in their relationships with the process variables. Although statistical analysis identified this response-specific interaction, the underlying chemical or physical mechanism was not tested directly.
+
+\section{Alternative Models and Predictive Performance}
+The results showed no clear predictive benefit from joint modelling or regularisation relative to the full quadratic regression benchmark.
+
+PLS modelled the four responses jointly, using their shared correlation structure, whereas quadratic regression modelled each response separately. The PLS and quadratic regression models produced almost identical training and LOOCV results, for every response under both the full and reduced models. The strong correlations among the responses provided no additional predictive benefit for PLS. However, PLS offered an additional interpretive perspective: its first two components identified the same two-level structure observed independently through response PCA, representing overall extraction performance and the distinction between the carbohydrate and protein responses.
+
+Ridge regression also provided no consistent predictive improvement. For the protein responses, for which the interaction terms contained little useful predictive information, shrinking the corresponding coefficients resulted in little loss of accuracy. For the carbohydrate responses, shrinking the $A:C$ coefficient alongwith the other interaction coefficients reduced predictive accuracy relative to the unpenalised full model. This suggested that regularisation was not equally suitable for all responses because the predictive importance of the interaction terms differed between the response families.
+
+\section{Response Component Interpretation}
+The four responses could be represented by two components: PC1 captured the variation shared across the extraction responses, while PC2 represented the contrast between carbohydrate- and protein- related responses. Reducing the response space to these two components resulted in little loss of predictive accuracy when predictions were transformed back to the original response units. However, the two components differed in their predictive behaviour. PC1 was predicted well by both full and reduced response-PC ridge models, whereas prediction of PC2 showed improvement when the interaction terms were removed. The greater effect of model reduction on PC2 indicated that the interaction terms had a stronger influence on prediction of carbohydrate--protein contrast than on prediction of their common extraction behaviour. 
+
+Thus, a model that predicts overall extraction accurately may not predict both response families equally well.
+
+\section{Robustness and Validation}
+\label{sec:discussion_robustness}
+LOOCV provided the primary basis for model comparison, while predictor-PC ridge regression and out-of-bag bootstrap resampling served as additional robustness checks. The predictor-PC analysis produced results very similar to those of ordinary ridge regression, showing that the ridge results were not strongly affected by how the quadratic predictors were represented. The bootstrap results were less consistent than the LOOCV results. The full quadratic regression still remained the strongest model for the carbohydrate responses, whereas the performance of the other full models deteriorated under resampling. For the protein responses, the reduced models remained stronger. 
+
+The independent confirmation run provided an additional point-specific assessment. Reduced quadratic regression and reduced response-PC ridge were more accurate at this condition, broadly consistent with their strong performance for the protein responses under LOOCV and bootstrap resampling. However, full quadratic regression, which was preferred for the carbohydrate responses under internal validation, did not perform as well at this particular point. Reduced ridge, despite ranking well in both earlier checks, was the least accurate model, although its absolute error remained small. These results do not change the broader conclusions from internal validation, but they demonstrate that performance at an individual condition can differ from average predictive performance evaluated across the experimental design.
+
+\section{Significance of the Study}
+The dissertation has two main findings. The first relates to model validation, while the second concerns model structure across different response families.
+
+Several models that performed well under LOOCV were less stable when evaluated using bootstrap resampling. This difference would not have been clear from training performance or single validation alone. The results therefore show that, for small datasets, relying on one validation method may not be enough. Combining cross-validation, bootstrap resampling, and an independent confirmation run provides a more reliable basis for comparing and selecting models.
+
+Regarding model structure, the results indicate that the same structure does not necessarily perform equally well for all responses in a multi-response experiment. In small multi-response studies, model structure may therefore need to be assessed separately for different response families rather than assuming that one model will perform well for all responses.
+
+These findings are also relevant to small food-process experiments, where the number of experimental runs may be limited. RSM remains useful for describing how process variables influence one or more responses and for identifying factor levels that may improve process performance \parencite{Bezerra:2008}. The results of this study suggest that RSM can provide a suitable modelling framework for small food-process experiments, but its predictive performance should be evaluated using appropriate validation methods.
+
+
+\section{Limitations}
+The dissertation is based on a single 17-run Box--Behnken design. Nested cross-validation, bootstrap resampling, and the independent confirmation experiment provided complementary assessments of model performance, but they cannot replace a larger or independently replicated experimental dataset. The relatively large bootstrap standard deviations observed for some models, particularly the full models, reflect the uncertainty associated with repeatedly resampling such a small dataset.
+
+The independent experiment evaluated only one new condition, so it could not establish whether the observed carbohydrate--protein distinction or the relative performance of the candidate models would remain throughout the experimental region.
+
+The chemical or physical mechanism underlying the interaction between amplitude and solid-to-solvent ratio was not investigated directly because the dissertation focused on statistical modelling rather than extraction chemistry. 
+
+The model comparison was limited to quadratic regression, PLS, ridge regression, and response- and predictor-PC ridge models. Other approaches, such as Gaussian process regression, support vector regression, and tree based methods, were not considered because it would be difficult to evaluate their performance reliably using only 17 experimental runs.
+
+Finally, the finding that the alternative methods did not consistently outperform RSM is specific to this dataset and experimental design. It is not known whether the same result would hold for other small experimental datasets with different sample sizes, response correlations, or interaction strengths.
+
+\section{Future Work}
+A simulation study using different sample sizes and interaction strength would help test whether the findings from this study apply beyond this dataset. This would show whether the lack of consistent predictive advantage for the alternative methods is applicable for small experimental datasets or is specific to the conditions studied here.
+
+A larger or independently replicated experimental design would provide stronger evidence for the observed carbohydrate--protein distinction. This would provide a stronger external validation using more than one confirmation condition.
+
+The confirmation experiment also raised the question of whether the slightly weaker performance of reduced ridge at the process optimum was due to model instability or variation at a single condition. The additional confirmation runs across the experimental region would help determine whether model performance changes across different experimental conditions.
+
+The model comparison could also be extended to other seaweed species, solvent systems, and extraction methods. This extension would help determine whether the observation that carbohydrate and protein responses may favour different model structures extends beyond the experimental system examined in this dissertation.
+
+
+\section{Closing Remarks}
+This dissertation examined whether the RSM approach used in the original experiment remained appropriate for a small experimental dataset or whether more flexible statistical approaches offered better predictive performance. For the dataset analysed here, RSM proved to be adequate, as no alternative method provided a consistent predictive advantage. The broader model comparison showed that different response families may require different model structures.
+
+This conclusion was primarily based on LOOCV and was further assessed through bootstrap resampling, predictor-PC analysis, and an independent confirmation run. Together, these analyses provided a more complete assessment of model performance than training results alone and demonstrated the importance of careful validation when comparing statistical methods using small experimental datasets.
+
+
+\printbibliography
+
+%==============================
+%APPENDICES
+%===============================
+\appendix
+
+%===============================
+%APPENDIX A
+%===============================
+\chapter{Additional Exploratory Plots}
+\label{app:model_results}
+
+Figure~\ref{fig:boxplots_raw_standardised} shows boxplots of the raw responses and their corresponding standardised response variables. The  responses were standardised to have a mean of zero and a variance of one, as described in Section~\ref{sec:exploratory_data_analysis}.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/boxplots_raw_standardised.png}
+\vspace{0.5em}
+\hrule
+\caption{Boxplots of raw response variables (left) and standardised response variables (right).}
+\label{fig:boxplots_raw_standardised}
+\vspace{0.5em}
+\hrule    
+\end{figure}    
+
+Figure~\ref{fig:scatterplot} shows the scatterplot matrix of the three coded process variables and four responses discussed in Section~\ref{sec:data_screening}.
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/scatterplot.png}
+\vspace{0.5em}
+\hrule
+\caption{Scatterplot matrix of the three coded process variables and the four response variables.}
+\label{fig:scatterplot}
+\vspace{0.5em}
+\hrule   
+\end{figure}  
+
+%===============================
+% APPENDIX B
+%===============================
+\chapter{PC Regression Coefficient Estimates}
+\label{app:pc_regression_coefficients}
+This appendix presents the coefficient estimates and significance tests for the second-order regressions of PC1 and PC2 on the coded process variables, as discussed in Section~\ref{sec:pca}.
+
+\begin{table}[H]
+    \centering
+    \caption{PC1 regression on coded process variables (adjusted $R^2 = 0.985$, overall $p < 0.001$).}
+    \label{tab:pc1_regression}
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{Term} & \textbf{Coefficient} & \textbf{$p$-value} \\
+    \midrule
+    $A$ & 0.550 & $<0.001$ \\
+    $B$ & 0.221 & 0.028 \\ 
+    $C$ & -2.060 & $<0.001$ \\
+    $A^2$ & -1.349 & $<0.001$ \\
+    $B^2$ & -1.001 & $<0.001$ \\
+    $C^2$ & 1.262 & $<0.001$ \\
+    Two-way interaction & -- & Not significant \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    
+\begin{table}[H]
+    \centering
+    \caption{PC2 regression on coded process variables (adjusted $R^2 = 0.933$, overall $p < 0.001$).}
+    \label{tab:pc2_regression}
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{Term} & \textbf{Coefficient} & \textbf{$p$-value} \\
+    $C$ & 0.580 & $<0.001$ \\
+    $A^2$ & -0.853 & $<0.001$ \\ 
+    $B^2$ & -0.642 & $<0.001$ \\
+    $C^2$ & 0.441 & 0.002 \\
+    $A$, $B$ (linear) & -- & Not significant \\
+    Two-way interactions & -- & Not significant \\
+    \bottomrule
+    \end{tabular}
+    \end{table}  
+
+
+%===============================
+% APPENDIX C
+%===============================
+\chapter{Quadratic Regression Model Estimates}
+\label{app:quad_regression_model}
+\section{Quadratic Regression Coefficient Estimates}
+This appendix presents the full coefficient estimates, and significance levels for the full and reduced quadratic regression models discussed in Sections~\ref{sec:full_quad_model} and ~\ref{sec:red_quad_model}.
+
+\begin{table}[H]
+\centering
+\caption{Estimated coefficients (full quadratic model) for the four responses. Significance codes: *** $p<0.001$, ** $0.001\leq p<0.01$, * $0.01\leq p<0.05$, . $0.05\leq p<0.10$ and no symbol for $p \geq 0.10$.}
+    \label{tab:full_quadratic_coefficients}
+    \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Term} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+    \midrule
+    Intercept & 281.240*** & 54.380*** & 38.140*** & 42.560*** \\
+    $A$       & 27.013***  & 5.300***  & 2.738*    & 3.062*    \\
+    $B$       & 4.550**    & 0.850**   & 2.163.     & 2.362.    \\
+    $C$       & -106.187*** & -20.575*** & -9.550*** & -10.700*** \\
+    $A^2$     & -20.158*** & -3.815*** & -14.220*** & -15.893*** \\
+    $B^2$     & -14.383*** & -2.815*** & -10.620*** & -11.842*** \\
+    $C^2$     & 32.843***  & 6.435***  & 11.055***  & 12.232*** \\
+    $A:B$     & -2.950     & -0.600.   & -0.800      & -0.875      \\
+    $A:C$     & -9.225***  & -1.900*** & -0.275      & -0.400      \\
+    $B:C$     & -2.200     & -0.400    & -0.175      & -0.150      \\
+    $R^2$ / adj. $R^2$ & 0.9993 / 0.9985 & 0.9994 / 0.9985 & 0.9817 / 0.9581 & 0.9810 / 0.9567 \\
+    \bottomrule
+    \end{tabular}
+\end{table}  
+
+
+\begin{table}[H]
+    \centering
+    \caption{Estimated coefficients (reduced quadratic model) for the four responses. Significance codes: *** $p<0.001$, ** $0.001\leq p<0.01$, * $0.01\leq p<0.05$, . $0.05\leq p<0.10$ and no symbol for $p \geq 0.10$.}
+    \label{tab:reduced_quadratic_coefficients}
+    \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Term} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+    \midrule
+    Intercept & 281.240*** & 54.380*** & 38.140*** & 42.560*** \\
+    $A$       & 27.013***  & 5.300***  & 2.738**   & 3.062**   \\
+    $B$       & 4.550.     & 0.850      & 2.163*    & 2.363*    \\
+    $C$       & -106.187*** & -20.575*** & -9.550*** & -10.700*** \\
+    $A^2$     & -20.158*** & -3.815*** & -14.220*** & -15.893*** \\
+    $B^2$     & -14.383*** & -2.815**  & -10.620*** & -11.842*** \\
+    $C^2$     & 32.843***  & 6.435***  & 11.055***  & 12.233*** \\
+    $R^2$ / adj. $R^2$ & 0.9955 / 0.9928 & 0.9951 / 0.9922 & 0.9805 / 0.9689 & 0.9799 / 0.9678 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Observed-versus-Fitted Plots}
+This section presents observed-versus-fitted plots for the full and reduced quadratic regression models discussed in Sections~\ref{sec:full_quad_model} and ~\ref{sec:red_quad_model}. These plots show the agreement between each model and the data used to estimate it.
+
+Figure~\ref{fig:obs_vs_fitted_full_quad_reg} presents the observed and fitted values for the four responses. The diagonal line represents perfect agreement between the observed and model-fitted values.
+
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/obs_vs_fitted_full_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus fitted values for the four full quadratic regression models.}
+\label{fig:obs_vs_fitted_full_quad_reg}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+The TSC and CRY observations lay close to the diagonal, indicating strong agreement between the observed and fitted values. This pattern was consistent with their high training $R^2$ values. The TPC and PRY observations showed greater scatter around the diagonal, although their fitted values remained reasonably close to the observed values. This pattern was consistent with their lower training $R^2$ values.
+
+Figure~\ref{fig:obs_vs_fitted_red_quad_reg} presents the observed and fitted values for the four reduced quadratic regression models.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/obs_vs_fitted_red_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Observed versus fitted values for the four reduced quadratic regression models.}
+\label{fig:obs_vs_fitted_red_quad_reg}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+All four responses remained close to the diagonal, including TSC and CRY, showing a good fit to the training data despite removing the interaction terms. However, the similarity of the training fits does not establish comparable predictive performance, because both sets of fitted values were obtained from the same observations used for model estimation.
+
+%===============================
+% APPENDIX D
+%===============================
+\chapter{Quadratic Regression Model Diagnostics}
+\label{app:diagnostics}
+This appendix presents the residual-versus-fitted plots, Cook's distance plots, and underlying diagnostic values for the full and reduced quadratic regression models discussed in Section~\ref{sec:diagnostics}.
+
+\section{Residual-versus-Fitted Plots}
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/residual_vs_fitted_full_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Residuals versus fitted values for the four full quadratic regression models.}
+\label{fig:residual_vs_fitted_full_quad_reg}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/residual_vs_fitted_red_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Residuals versus fitted values for the four reduced quadratic regression models.}
+\label{fig:residual_vs_fitted_red_quad_reg}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+For the full models, the residuals for CRY, TPC, and PRY were generally scattered around zero without an obvious systematic pattern. The TSC panel contained one isolated large residual for Run 7, with a residual of $-7.14$; the remaining TSC residuals ranged from $-0.77$ to 2.56. CRY, which was almost perfectly correlated with TSC ($r = 1.000$),(Table~\ref{tab:correlation_matrix}), showed the same pattern for the same run, scaled to its smaller range.
+
+For the reduced models, residual spread increased for TSC and CRY relative to the full models, consistent with the larger residual standard errors associated with the reduced specification. For TSC, the reduced-model residuals ranged from $-9.45$ to 10.08, compared with a maximum absolute residual of 7.14 for the full model. For CRY, the reduced-model residuals ranged from $-1.93$ to 1.98, compared with a maximum absolute residual of approximately 1.40 for  the full model. 
+
+For TPC and PRY, residual spread was similar to that of the full models and was marginally narrower at the observed extremes. For TPC, the reduced-model residuals ranged from $-3.10$ to 2.46, compared with $-3.05$ to 2.60 for the full model. For PRY, the corresponding ranges were $-3.56$ to 2.64 for the reduced model and $-3.60$ to 2.90 for the full model. 
+
+No funnel shape or systematic curvature was evident in either model, consistent with the constant-variance assumption underlying ordinary least squares.
+
+\section{Cook's Distance}
+Results for the full models are shown in Figure~\ref{fig:cooks_dist_full_quad}, and for the reduced models in Figure~\ref{fig:cooks_dist_red_quad}.
+The dashed line marks the screening threshold of 0.235. It is only visible on the TPC and PRY panels because the TSC and CRY values fall below it in Figure~\ref{fig:cooks_dist_full_quad}. For the Figure~\ref{fig:cooks_dist_red_quad}, it is visible in all four panels.
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/Cooks_distance_full_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Cook's distance by experimental run for the four full quadratic regression models.}
+\label{fig:cooks_dist_full_quad}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/Cooks_distance_red_quad.png}
+\vspace{0.5em}
+\hrule
+\caption{Cook's distance by experimental run for the four reduced quadratic regression models.}
+\label{fig:cooks_dist_red_quad}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+For the full models, no run exceeded the screening threshold for TSC or CRY. Although Run 7 had the largest Cook's distance for both responses (approximately 0.16), it remained below the screening threshold, indicating that neither model contained a strongly influential observation. For TPC and PRY, several observations exceeded the $4/n$ threshold (Runs 4, 5, 6 and 15). Runs 5 and 6 had the largest Cook's distances (approximately 1.15 for both responses). Runs 4 and 15 also showed comparatively high influence, reaching approximately 0.9. Several additional runs were close to or slightly above the threshold. These results indicate that the fitted quadratic models for TPC and PRY were more sensitive to individual experimental runs than those for TSC and CRY.
+
+Removing the interaction terms changed the influence pattern across the two response families. For TSC and CRY, four observations exceeded the 0.235 screening threshold in the reduced models, whereas  no observations exceeded this threshold in the corresponding full models. The flagged observations were Runs 5, 6, 9, and 13. Run 13 had the largest Cook's distance for both responses, with D $\approx$ 0.62 for TSC, and $D \approx 0.59$ for CRY. These values were substantially greater than the largest Cook's distance observed in the full models ($D \approx 0.16$).
+
+For TPC and PRY, the reduced models had lower maximum Cook's distance values than the full models. Only Runs 4 and 6 exceeded the screening threshold, and the largest values were $D \approx 0.53$ for TPC and $D \approx 0.51$ for PRY, both associated with Run 4. This represented a reduction from the maximum Cook's distance values of approximately 1.15 to 1.18 observed in the corresponding full models.
+
+Taken together, these figures above show that the effect of removing the interaction terms for TSC and CRY was not limited to the reduction in predictive accuracy already reported in Table~\ref{tab:full_vs_reduced_quad_model_comp}. The reduced models were also more sensitive to individual observations, with Run 13 having greater influence on the fitted model than any observation in the corresponding full models. The improved cross-validated predictive performance obtained for TPC and PRY under the reduced model coincided with lower Cook's distance values and, therefore, reduced sensitivity to individual observations. This pattern supports the view that the interaction terms introduced unnecessary model complexity for these two responses rather than useful predictive information.
+
+
+%===============================
+% APPENDIX E
+%===============================
+\chapter{MANOVA Results}
+\label{app:manova}
+This appendix presents the complete Pillai's trace results for the three nested MANOVA models compared in Section~\ref{sec:manova_res} : main effects only (Model i), main effects with two-way interactions (Model ii), and the full quadratic model (Model iii).
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Pillai's trace by term across the three nested models.}
+\label{tab:pillai_nested_models}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} &
+\makecell{\textbf{Model (i):}\\\textbf{Main effects}} &
+\makecell{\textbf{Model (ii):}\\\textbf{+ Interactions}} &
+\makecell{\textbf{Model (iii):}\\\textbf{Full quadratic}} \\
+\midrule
+$A$ (Amplitude)
+& Pillai = 0.757, $p = 0.0041$
+& Pillai = 0.797, $p = 0.0142$
+& Pillai = 0.992, $p = 0.0002$ \\
+
+$B$ (Extraction time)
+& Pillai = 0.115, $p = 0.8557$
+& Pillai = 0.143, $p = 0.8750$
+& Pillai = 0.748, $p = 0.1589$ \\
+
+$C$ (Solid-to-Solvent ratio)
+& Pillai = 0.985, $p < 0.0001$
+& Pillai = 0.987, $p < 0.0001$
+& Pillai = 0.999, $p < 0.0001$ \\
+$A:B$ & -- & Pillai = 0.034, $p = 0.9913$ & Pillai = 0.481, $p = 0.5288$ \\
+$A:C$ & -- & Pillai = 0.432, $p = 0.3470$ & Pillai = 0.926, $p = 0.0158$ \\
+$B:C$ & -- & Pillai = 0.070, $p = 0.9655$ & Pillai = 0.273, $p = 0.8172$ \\
+$A^2$ & -- & -- & Pillai = 0.971, $p = 0.0025$ \\
+$B^2$ & -- & -- & Pillai = 0.934, $p = 0.0125$ \\
+$C^2$ & -- & -- & Pillai = 0.988, $p = 0.0004$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The solid-to-solvent ratio factor ($C$) showed the strongest multivariate effect across all three models, followed by amplitude ($A$), which was significant throughout but had a weaker effect than $C$. Extraction time ($B$) was non-significant throughout. The $A:C$ term was the only statistically significant interaction term in the full quadratic model. 
+The sequential comparisons of the nested models showed that adding the interaction terms to the main-effects model did not significantly improve the joint multivariate fit. The comparison produced a Pillai's trace of 1.189, and $p=0.4974$. In contrast, adding the quadratic terms to the interaction model significantly improved the joint fit, producing a Pillai's trace of 2.224, and $p=0.0028$.
+
+
+%===============================
+% APPENDIX F
+%===============================
+\chapter{PLS Results}
+\label{app:pls_model}
+This appendix presents the complete training and nested LOOCV performance tables, loading weights, and Y-loadings for the linear, full quadratic, and reduced quadratic PLS models discussed in Section~\ref{sec:PLS}. It also presents the detailed component loadings structures and score plots for Components 3--5 of the full quadratic PLS model, referenced in Section~\ref{sec:full_quad_pls}, and the corresponding component-loading structure for the reduced quadratic PLS model, referenced in Section~\ref{sec:red_quad_pls}.
+
+\section{Linear PLS Model}
+The resulting cross-validated performance of the linear PLS model is reported in Table~\ref{tab:linear_model_performance}.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Training and nested LOOCV performance of the linear PLS model (1 component).}
+\label{tab:linear_model_performance}
+\begin{tabular}{lrcccccr}
+\toprule
+\textbf{Response} & \makecell{\textbf{Train}\\\textbf{RMSE}} & \makecell{\textbf{Train}\\\textbf{$R^2$}} & \makecell{\textbf{LOOCV}\\\textbf{RMSE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} & \makecell{\textbf{LOOCV}\\\textbf{Bias}} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & 20.626 & 0.930 & 32.453 & 0.404 & -0.039 & 0.827 \\
+CRY & 4.020 & 0.930 & 6.313 & 0.405 & -0.012 & 0.826 \\
+TPC & 10.488 & 0.300 & 11.983 & 0.927 & -0.145 & 0.087 \\
+PRY & 11.687 & 0.303 & 13.354 & 0.926 & -0.160 & 0.089 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The single retained component explained 33.3\% of the variance in the predictor block. It explained 93.0\% and 92.9\% of the variance in TSC and CRY, respectively, but only 30.0\% and 30.3\% of the variance in TPC and PRY. The first-component loading weights were $A = -0.247$, $B \approx 0$ and $C = 0.968$, indicating that the single retained component was dominated by solid-to-solvent ratio, with a smaller  contribution from amplitude and a negligible contribution from extraction time.
+
+\section{Full Quadratic PLS Model}
+The resulting training and cross-validated performance of the five-component model is presented in Table~\ref{tab:full_quadratic_pls_performance}.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Training and nested LOOCV performance of the full quadratic PLS model (5 components).}
+\label{tab:full_quadratic_pls_performance}
+\begin{tabular}{lrrrccccr}
+\toprule
+\textbf{Response} & \makecell{\textbf{Train}\\\textbf{RMSE}} & \makecell{\textbf{Train}\\\textbf{$R^2$}} & \makecell{\textbf{LOOCV}\\\textbf{RMSE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} &
+\makecell{\textbf{LOOCV}\\\textbf{MAE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV MAE}} & \makecell{\textbf{LOOCV}\\\textbf{Bias}} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & 2.009 & 0.999 & 3.010 & 0.037 & 2.354 & 0.029 & 0.004 & 0.999 \\
+CRY & 0.385 & 0.999 & 0.518 & 0.033 & 0.343 & 0.022 & -0.003 & 0.999 \\
+TPC & 1.698 & 0.982 & 5.738 & 0.444 & 4.636 & 0.359 & -0.020 & 0.791 \\
+PRY & 1.927 & 0.981 & 6.472 & 0.449 & 5.273 & 0.366 & -0.018 & 0.786 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For Component 1, the loading weight for $C$ was $-0.930$, while A and $C^2$ contributed more weakly, with weights of 0.237 and  0.208, respectively. The Y-loadings were positive for all four responses (80.528 for TSC, 15.619 for CRY, 9.497 for TPC, and 10.619 for PRY). Component 2 was driven mainly by the quadratic terms $A^2$ and $B^2$, with weights of $-0.706$ and $-0.542$, respectively. Component 3 was dominated by $C^2$ (-0.906), with smaller contributions from $C$, $A^2$, and $B^2$ ($-0.117$, $-0.244$, and $-0.312$, respectively).
+
+\begin{figure}[H]
+\hrule
+\vspace{0.5em}
+\centering
+\includegraphics[draft=false,width=0.95\textwidth]{Figures/comp 3 vs 4 full quad model.png}
+\vspace{0.5em}
+\hrule
+\caption{Scores for PLS Component 3 and 4 from the full quadratic model, labelled by experimental run}
+\label{fig:comp_3_vs_4_full_quad_model}
+\vspace{0.5em}
+\hrule   
+\end{figure} 
+
+Figure~\ref{fig:comp_3_vs_4_full_quad_model} shows the score plot for Components 3 and 4. The five centre-point replicates (Runs 2, 3, 7, 11, and 16) formed a tight cluster at the most extreme positive value on the Component 3 axis. Both the low-ratio runs (Runs 6, 9, 10, and 12) and the high-ratio runs (Runs 5, 8, 13, and 17), occupied the opposite side, with the low-ratio runs positioned closer to the centre-point cluster. Together with the dominant $C^2$ loading, the pattern indicates that Component 3 represented curvature in the solvent-ratio effect rather than a simple contrast. Component 4 was dominated by the linear extraction-time term $B$ (0.776), with smaller contributions from $B^2$ and $A:C$ (0.409 and 0.429, respectively). Runs at the high extraction-time setting of 15 minutes (Runs 1, 4, 8, and 12) had positive Component 4 scores, and runs at the low time setting of 5 minutes (Runs 10, 14, 15, 17) had negative scores. This ordering was consistent with Component 4 capturing the main effect of extraction time.
+As the number of components increased from two to five, the full-data cross-validated RMSEP decreased consistently across all four responses: from 63.22 to 3.03 for TSC, 12.27 to 0.52 for CRY, 9.92 to 5.70 for TPC, and 11.05 to 6.428 for PRY). This pattern indicated that the later components contributed genuine predictive information, although their substantive interpretation was weaker than that of Components 1 and 2.  A sixth component produced small further gains for TSC and CRY but a small loss for TPC and PRY, consistent with the minimum overall RMSEP being reached at five components.  Component 5 was retained as it improved the overall predictive performance, although it did not have a clear process interpretation.
+
+\section{Reduced Quadratic PLS Model}
+The resulting cross-validated performance of the reduced quadratic PLS model is reported in Table~\ref{tab:red_quadratic_pls_performance}.
+
+\begin{table}[H]
+\centering
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Training and nested LOOCV performance of the reduced quadratic PLS model (4 components).}
+\label{tab:red_quadratic_pls_performance}
+\begin{tabular}{lrrrccccr}
+\toprule
+\textbf{Response} & \makecell{\textbf{Train}\\\textbf{RMSE}} & \makecell{\textbf{Train}\\\textbf{$R^2$}} & \makecell{\textbf{LOOCV}\\\textbf{RMSE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV RMSE}} &
+\makecell{\textbf{LOOCV}\\\textbf{MAE}} & \makecell{\textbf{Scaled}\\\textbf{LOOCV MAE}} & \makecell{\textbf{LOOCV}\\\textbf{Bias}} & \makecell{\textbf{Predictive}\\\textbf{$Q^2$}} \\
+\midrule
+TSC & 5.220 & 0.996 & 9.981 & 0.124 & 7.815 & 0.097 & 0.003 & 0.984 \\
+CRY & 1.059 & 0.995 & 2.031 & 0.130 & 1.568 & 0.100 & -0.002 & 0.982 \\
+TPC & 1.749 & 0.981 & 3.165 & 0.245 & 2.546 & 0.197 & -0.003 & 0.936 \\
+PRY & 1.984 & 0.980 & 3.576 & 0.248 & 2.910 & 0.202 & -0.002 & 0.935 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+The four-component model explained 99.55\% of the training variance in TSC, 99.51\% in CRY, 98.05\% in TPC, and 97.99\% in PRY, closely matching the training fits of the reduced quadratic regression models. As in the full model, Component 1 captured most of the variation in the carbohydrate responses, while Component 2 was required to capture the protein-response variation. Component 3 and 4 provided smaller additional increases . All four components reproduced the structure identified in the full model, confirming that this interpretation did not depend on the interaction terms.
+
+%===============================
+% APPENDIX G
+%===============================
+\chapter{Ridge Regression Coefficients}
+\label{app:ridge_coefficients}
+This appendix presents the standardised ridge regression coefficients for the full and reduced quadratic ridge models discussed in Sections~\ref{sec:full_quad_ridge_reg} and ~\ref{sec:red_quad_ridge_reg}.
+
+\section{Full Quadratic Ridge Regression}
+\label{app:full_quad_ridge_coef}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Standardised ridge coefficients for the full quadratic predictor model ($\lambda = 0.118$).}
+\label{tab:full_quad_ridge_coef}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Term} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+\midrule
+$A$ & 0.331 & 0.335 & 0.209 & 0.209 \\
+$B$ & 0.056 & 0.054 & 0.165 & 0.161 \\
+$C$ & -1.302 & -1.300 & -0.728 & -0.731 \\
+$A^2$ & -0.244 & -0.238 & -1.070 & -1.072 \\
+$B^2$ & -0.174 & -0.175 & -0.800 & -0.799 \\
+$C^2$ & 0.397 & 0.401 & 0.829 & 0.822 \\
+$A:B$ & -0.036 & -0.037 & -0.060 & -0.059 \\
+$A:C$ & -0.111 & -0.118 & -0.021 & -0.027 \\
+$B:C$ & -0.027 & -0.025 & -0.013 & -0.010 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Reduced Quadratic Ridge Regression}
+\label{app:red_quad_ridge_coef}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Standardised ridge coefficients for the reduced quadratic predictor model ($\lambda = 0.046$).}
+\label{tab:red_quad_ridge_coef}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Term} & \textbf{TSC} & \textbf{CRY} & \textbf{TPC} & \textbf{PRY} \\
+\midrule
+$A$ & 0.334 & 0.338 & 0.211 & 0.211 \\
+$B$ & 0.056 & 0.054 & 0.166 & 0.163 \\
+$C$ & -1.313 & -1.312 & -0.735 & -0.738 \\
+$A^2$ & -0.248 & -0.242 & -1.088 & -1.090 \\
+$B^2$ & -0.177 & -0.178 & -0.813 & -0.812 \\
+$C^2$ & 0.404 & 0.408 & 0.845 & 0.838 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+%===============================
+% APPENDIX H
+%===============================
+\chapter{Model Stability and Bootstrap Results}
+\label{app:robustness_and_stability}
+This appendix presents the predictor-PC ridge results referenced in Section~\ref{sec:robustness_predictor_parameterisation} for both the full and reduced quadratic predictor sets.
+
+Variance was almost evenly distributed across all available components for both predictor sets. For the full set, each of the nine components explained 10.5 -- 12.4\% of the variance; for the reduced set, each of the six components explained 15.7 -- 18.5\%. So, no component clearly dominated in either case. LOOCV retained all available components for both models with $\lambda = 0.298$ for the full model and $\lambda = 0.142$ for the reduced model.
+
+
+\begin{table}[H]
+\centering
+\small
+\caption{LOOCV performance of the full and reduced quadratic predictor-PC ridge models.}
+\label{tab:predictor_pc_ridge_loocv}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Response} & \textbf{Model} & \textbf{LOOCV RMSE} & \textbf{Scaled LOOCV RMSE} & \textbf{LOOCV Bias} & \textbf{Predictive $Q^2$} \\
+\midrule
+TSC & Full & 5.903 & 0.073 & 0.010 & 0.994 \\
+TSC & Reduced & 9.991 & 0.124 & 0.001 & 0.984 \\
+CRY & Full & 1.116 & 0.072 & 0.001 & 0.995 \\
+CRY & Reduced & 2.031 & 0.130 & $\sim 0$ & 0.982 \\
+TPC & Full & 5.566 & 0.430 & 0.078 & 0.803 \\
+TPC & Reduced & 3.151 & 0.244 & 0.010 & 0.937 \\
+PRY & Full & 6.275 & 0.435 & 0.088 & 0.799 \\
+PRY & Reduced & 3.561 & 0.247 & 0.012 & 0.935 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Performance closely matched that of plain ridge in both cases. For the full models, $Q^2$ under predictor-PC ridge was 0.994 for TSC, 0.995 for CRY, 0.803 for TPC, and 0.799 for PRY, compared with 0.994, 0.994, 0.788, and 0.784 respectively under plain ridge. For the reduced models, $Q^2$ was identical for TSC and CRY (0.984 and 0.982, respectively), and marginally lower under predictor-PC ridge for TPC and PRY (0.937 and 0.935, against 0.938 and 0.937 for plain ridge). So, rotating the predictors before applying the ridge penalty had little effect for either predictor set, and the weaker performance for TPC and PRY already observed in the full model remained after rotation.
+
+\section{Bootstrap Diagnostic Detail}
+\label{app:bootstrap_diagnostic}
+Of the 1,000 bootstrap replicates, six models completed 997 successfully, while full quadratic PLS and full response-PC ridge each each completed 966 successfully. The main comparison Table~\ref{tab:bootstrap_response_family} uses the 966 replicates common to all the models.
+%
+%
+\backmatter 
+%
+%
+\end{document}
